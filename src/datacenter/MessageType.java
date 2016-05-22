@@ -1,0 +1,5 @@
+package datacenter;
+
+public enum MessageType {
+	APPEND_ENTRIES, APPEND_ENTRIES_RESPONSE, REQUEST_VOTE, REQUEST_VOTE_RESPONSE
+}
