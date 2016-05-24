@@ -39,7 +39,7 @@ public class AppendEntriesRPC extends Message {
 	public int getLeaderCommit() {
 		return leaderCommit;
 	}
-
+	
 	public AppendEntriesRPC(int term, int leaderId, int prevLogIndex, int prevLogTerm, List<LogEntry> entries,
 			int leaderCommit) {
 		super(MessageType.APPEND_ENTRIES);
