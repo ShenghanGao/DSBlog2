@@ -323,11 +323,42 @@ public class AppServer {
 					LogEntry logEntry = AppServer.appServer.log.get(prevLogIndex);
 					if (logEntry.getTerm() != ae.getPrevLogTerm()) {
 						success = false;
+						deleteEntriesFromIndex(ae.getPrevLogIndex());
+					}
+
+				}
+
+				// 3
+				// heartbeat
+				if (ae.getEntries().size() == 0) {
+					deleteEntriesFromIndex(ae.getPrevLogIndex());
+				}
+
+				for (int i = 0; i < ae.getEntries().size(); ++i) {
+					LogEntry aeEntry = ae.getEntries().get(i);
+					int existingEntryIndex = ae.getPrevLogIndex() + 1 + i;
+					LogEntry existingEntry = getEntryFromIndex(existingEntryIndex);
+					if (existingEntry == null)
+						break;
+					else if (existingEntry.getTerm() != aeEntry.getTerm()) {
+						deleteEntriesFromIndex(existingEntryIndex);
 					}
 				}
-				// 3
 
-				Message response = new AppendEntriesRPCResponse();
+				// TODO: ???
+				for (LogEntry e : ae.getEntries()) {
+					AppServer.appServer.log.add(e);
+				}
+				// ???
+
+				// 4
+				if (ae.getLeaderCommit() > AppServer.appServer.commitIndex) {
+					AppServer.appServer.commitIndex = Math.min(ae.getLeaderCommit(),
+							AppServer.appServer.log.size() - 1);
+				}
+				success = true;
+
+				Message response = new AppendEntriesRPCResponse(AppServer.appServer.currentTerm, success);
 				return response;
 			}
 
@@ -338,13 +369,49 @@ public class AppServer {
 			private Message recvRequestVote(Message message) {
 				RequestVoteRPC rv = (RequestVoteRPC) message;
 
-				Message response = new RequestVoteRPCResponse();
+				boolean voteGranted;
+
+				// 1
+				if (rv.getTerm() < AppServer.appServer.currentTerm) {
+					voteGranted = false;
+				}
+
+				// 2
+				boolean isUpToDate = true;
+
+				int currentIndex = AppServer.appServer.log.size() - 1;
+				LogEntry e = getEntryFromIndex(currentIndex);
+
+				if (e.getTerm() > rv.getLastLogTerm()
+						|| (e.getTerm() == rv.getLastLogTerm() && currentIndex > rv.getLastLogIndex())) {
+					isUpToDate = false;
+				}
+
+				if ((AppServer.appServer.votedFor == null || AppServer.appServer.votedFor == rv.getCandidateId())
+						&& isUpTodate) {
+					voteGranted = true;
+				}
+
+				Message response = new RequestVoteRPCResponse(AppServer.appServer.currentTerm, voteGranted);
 				return response;
 			}
 
 			private void recvRequestVoteResponse(Message message) {
 
 			}
+
+			private LogEntry getEntryFromIndex(int i) {
+				if (i >= AppServer.appServer.log.size())
+					return null;
+				return AppServer.appServer.log.get(i);
+			}
+
+			private void deleteEntriesFromIndex(int i) {
+				while (i <= AppServer.appServer.log.size()) {
+					AppServer.appServer.log.remove(AppServer.appServer.log.size() - 1);
+				}
+			}
+
 		}
 	}
 }
