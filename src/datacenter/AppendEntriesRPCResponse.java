@@ -3,6 +3,11 @@ package datacenter;
 public class AppendEntriesRPCResponse extends Message {
 	private int term;
 	private boolean success;
+	private int logIndex;
+
+	public int getLogIndex() {
+		return logIndex;
+	}
 
 	public int getTerm() {
 		return term;
