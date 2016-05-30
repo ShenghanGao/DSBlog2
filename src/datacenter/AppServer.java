@@ -222,7 +222,9 @@ public class AppServer {
 	//
 	// /* we always assume # of servers > 1 */
 	public static void serverPeriodic() {
-		sendAppendEntriesToAll();
+		if (appServer.state == ServerState.LEADER) {
+			sendAppendEntriesToAll();
+		}
 
 		// appServer.timeElapsed += period;
 		//
