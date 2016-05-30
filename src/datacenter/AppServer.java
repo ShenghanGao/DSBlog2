@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -86,6 +87,9 @@ public class AppServer {
 			oos.writeObject(rpc);
 			oos.flush();
 			socket.close();
+		} catch (ConnectException e) {
+			System.out.println(
+					e.getMessage() + ", possibly no process is listening on" + node.getIPAddress() + ":" + DC_PORT);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
