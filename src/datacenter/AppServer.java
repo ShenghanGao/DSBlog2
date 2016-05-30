@@ -87,9 +87,10 @@ public class AppServer {
 			oos.writeObject(rpc);
 			oos.flush();
 			socket.close();
+			System.out.println("RPC sent to node " + node.getId() + " (" + node.getIPAddress() + ":" + DC_PORT + ").");
 		} catch (ConnectException e) {
 			System.out.println(
-					e.getMessage() + ", possibly no process is listening on" + node.getIPAddress() + ":" + DC_PORT);
+					e.getMessage() + ", possibly no process is listening on " + node.getIPAddress() + ":" + DC_PORT);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
