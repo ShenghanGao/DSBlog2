@@ -552,8 +552,8 @@ public class AppServer {
 		//
 		// /*
 		// * If there exists an N such that N > commitIndex, a majority of
-		// * matchIndex[i] ¡Ý N, and log[N].term == currentTerm: set
-		// * commitIndex = N (¡ì5.3, ¡ì5.4).
+		// * matchIndex[i] >= N, and log[N].term == currentTerm: set
+		// * commitIndex = N (5.3, 5.4).
 		// */
 		// int lastLogIndex = AppServer.appServer.log.size() - 1;
 		// for (int N = lastLogIndex; N > AppServer.appServer.commitIndex; --N)
