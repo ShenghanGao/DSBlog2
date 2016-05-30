@@ -16,7 +16,7 @@ import java.util.List;
 public class AppServer {
 	private static AppServer appServer = new AppServer();
 
-	private static final int period = 100;
+	private static final int period = 4000;
 
 	private static final int CLIENTS_PORT = 8887;
 
@@ -306,16 +306,17 @@ public class AppServer {
 		Thread listenToClientsThread = new Thread(new ListenToClientsThread());
 		listenToClientsThread.start();
 
-		// Thread listenToDCThread = new ListenToDCThread();
-		// listenToDCThread.start();
+		Thread listenToDCThread = new ListenToDCThread();
+		listenToDCThread.start();
 
-		// while (true) {
-		// try {
-		// Thread.sleep(period);
-		// } catch (InterruptedException e) {
-		// e.printStackTrace();
-		// }
-		// }
+		while (true) {
+			try {
+				AppServer.serverPeriodic();
+				Thread.sleep(period);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
 
 		// try {
 		// listenToDCThread.join();
@@ -463,9 +464,9 @@ public class AppServer {
 		private static Message recvAppendEntries(Message message) {
 			AppendEntriesRPC ae = (AppendEntriesRPC) message;
 
-			System.out.println("term = " + ae.getTerm() + ", leaderId = " + ae.getLeaderId() + ", prevLogIndex = "
-					+ ae.getPrevLogIndex() + ", prevLogTerm = " + ae.getPrevLogTerm() + ", leaderCommit = "
-					+ ae.getLeaderCommit());
+			System.out.println("recvAppendEntries: term = " + ae.getTerm() + ", leaderId = " + ae.getLeaderId()
+					+ ", prevLogIndex = " + ae.getPrevLogIndex() + ", prevLogTerm = " + ae.getPrevLogTerm()
+					+ ", leaderCommit = " + ae.getLeaderCommit());
 
 			return null;
 
