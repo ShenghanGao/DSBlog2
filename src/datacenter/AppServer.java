@@ -62,6 +62,14 @@ public class AppServer {
 		System.out.println("\n");
 	}
 
+	public static void printEntries(List<LogEntry> entries) {
+		System.out.println("Entries: ");
+		for (LogEntry e : entries) {
+			System.out.println(e.getCommand());
+		}
+		System.out.println("End of entries\n");
+	}
+
 	private AppServer() {
 		log = new ArrayList<>();
 		nodes = new ArrayList<>();
@@ -145,6 +153,7 @@ public class AppServer {
 				System.out.println("recvEntry, AppendEntries: term = " + ae.getTerm() + ", leaderId = "
 						+ ae.getLeaderId() + ", prevLogIndex = " + ae.getPrevLogIndex() + ", prevLogTerm = "
 						+ ae.getPrevLogTerm() + ", leaderCommit = " + ae.getLeaderCommit());
+				printEntries(ae.entries);
 				System.out.println("recvEntry, send RPC to node " + node.getId() + ".");
 			}
 
@@ -415,6 +424,9 @@ public class AppServer {
 		if (appServer.id == 0) {
 			appServer.state = ServerState.LEADER;
 		}
+
+		appServer.currentLeader = 0;
+		appServer.currentTerm = 1;
 
 		Thread listenToClientsThread = new Thread(new ListenToClientsThread());
 		listenToClientsThread.start();
