@@ -39,7 +39,7 @@ public class AppServer {
 
 	private boolean isVoting;
 
-	List<LogEntry> log;
+	private List<LogEntry> log;
 
 	private int commitIndex;
 
@@ -54,6 +54,7 @@ public class AppServer {
 	private int currentLeader;
 
 	private AppServer() {
+		log = new ArrayList<>();
 		nodes = new ArrayList<>();
 	}
 
