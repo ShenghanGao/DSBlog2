@@ -4,8 +4,10 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -53,6 +55,13 @@ public class AppServer {
 
 	private int currentLeader;
 
+	public static void printLog() {
+		for (LogEntry e : appServer.log) {
+			System.out.println(e.getCommand());
+		}
+		System.out.println("\n");
+	}
+
 	private AppServer() {
 		log = new ArrayList<>();
 		nodes = new ArrayList<>();
@@ -96,6 +105,51 @@ public class AppServer {
 		}
 	}
 
+	public static void handleClientsReq(String req, Socket socket) {
+		String[] ss = req.split(" ", 2);
+		if (ss[0].compareTo("p") == 0) {
+			recvEntry(ss[1]);
+		} else if (ss[0].compareTo("l") == 0) {
+			lookup(socket);
+		}
+	}
+
+	public static void recvEntry(String command) {
+		// TODO: cfg_change
+
+		if (appServer.state != ServerState.LEADER) {
+			if (DEBUG)
+				System.out.println("I am not the leader and I need to redirect this entry.");
+			sendMessage(appServer.nodes.get(appServer.currentLeader), command);
+			return;
+		}
+
+		LogEntry entry = new LogEntry(appServer.currentTerm, command);
+		appServer.log.add(entry);
+
+		for (Node node : appServer.nodes) {
+			if (node.getId() == appServer.id)
+				continue;
+
+			if (node.getNextIndex() == appServer.log.size() - 1) {
+				AppendEntriesRPC ae = genAppendEntriesRPC(node);
+				sendMessage(node, ae);
+			}
+		}
+
+		// TODO: Response the client
+	}
+
+	private static void lookup(Socket socket) {
+		try {
+			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+			oos.writeObject(appServer.posts);
+			oos.flush();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
 	public static AppendEntriesRPC genAppendEntriesRPC(Node node) {
 		int nextIndex = node.getNextIndex();
 		int prevLogIndex = -1, prevLogTerm = -1;
@@ -109,7 +163,7 @@ public class AppServer {
 		return ae;
 	}
 
-	public static void sendMessage(Node node, Message rpc) {
+	public static void sendMessage(Node node, Serializable message) {
 		InetAddress address = null;
 		try {
 			address = InetAddress.getByName(node.getIPAddress());
@@ -120,12 +174,12 @@ public class AppServer {
 		try {
 			Socket socket = new Socket(address, DC_PORT);
 			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-			oos.writeObject(rpc);
+			oos.writeObject(message);
 			oos.flush();
 			socket.close();
 			if (DEBUG)
 				System.out.println(
-						"RPC sent to node " + node.getId() + " (" + node.getIPAddress() + ":" + DC_PORT + ").");
+						"Message sent to node " + node.getId() + " (" + node.getIPAddress() + ":" + DC_PORT + ").");
 		} catch (ConnectException e) {
 			System.out.println(
 					e.getMessage() + ", possibly no process is listening on " + node.getIPAddress() + ":" + DC_PORT);
@@ -296,7 +350,7 @@ public class AppServer {
 	 * megatron.cs.ucsb.edu: 128.111.43.42
 	 */
 	public static void main(String[] args) {
-		String IPAddressesFile = "./IPAddresses";
+		String IPAddressesFile = "./IPAddresses2";
 
 		BufferedReader br = null;
 		try {
@@ -358,6 +412,8 @@ public class AppServer {
 			try {
 				serverPeriodic();
 				Thread.sleep(period);
+				printLog();
+				Thread.sleep(period);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
@@ -375,10 +431,27 @@ public class AppServer {
 				e.printStackTrace();
 			}
 			while (true) {
-				Socket socket;
+				Socket socket = null;
 				try {
 					socket = listenToClientsSocket.accept();
+				} catch (IOException e) {
+					e.printStackTrace();
+					continue;
+				}
 
+				String req = null;
+				try {
+					InputStreamReader isr = new InputStreamReader(socket.getInputStream());
+					BufferedReader br = new BufferedReader(isr);
+					req = br.readLine();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+
+				handleClientsReq(req, socket);
+
+				try {
+					socket.close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -409,10 +482,10 @@ public class AppServer {
 						sendMessage(appServer.nodes.get(appServer.currentLeader), response);
 						break;
 					}
-						// case APPEND_ENTRIES_RESPONSE: {
-						// recvAppendEntriesResponse(message);
-						// break;
-						// }
+					case APPEND_ENTRIES_RESPONSE: {
+						recvAppendEntriesResponse(message);
+						break;
+					}
 						// case REQUEST_VOTE: {
 						// Message response = recvRequestVote(message);
 						// break;
