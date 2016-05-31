@@ -117,6 +117,9 @@ public class AppServer {
 	public static void recvEntry(String command) {
 		// TODO: cfg_change
 
+		if (DEBUG)
+			System.out.println("recvEntry, command = " + command);
+
 		if (appServer.state != ServerState.LEADER) {
 			if (DEBUG)
 				System.out.println("I am not the leader and I need to redirect this entry.");
