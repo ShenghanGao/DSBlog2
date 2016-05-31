@@ -680,6 +680,11 @@ public class AppServer {
 		private static void recvAppendEntriesResponse(Message message) {
 			AppendEntriesRPCResponse aer = (AppendEntriesRPCResponse) message;
 
+			if (DEBUG) {
+				System.out.println("recvAppendEntriesResponse: term = " + aer.getTerm() + ", success = "
+						+ aer.isSuccess() + ", nodeId = " + aer.getNodeId());
+			}
+
 			if (appServer.state != ServerState.LEADER) {
 				return;
 			}
@@ -734,8 +739,8 @@ public class AppServer {
 			}
 
 			// Send remaining entries, is this needed?
-			AppendEntriesRPC ae = genAppendEntriesRPC(node);
-			sendMessage(node, ae);
+			// AppendEntriesRPC ae = genAppendEntriesRPC(node);
+			// sendMessage(node, ae);
 		}
 
 		//
