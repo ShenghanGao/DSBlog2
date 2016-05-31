@@ -524,7 +524,7 @@ public class AppServer {
 
 			if (success) {
 				/*
-				 * 2. Reply false if log doesn¡¯t contain an entry at
+				 * 2. Reply false if log doesn't contain an entry at
 				 * prevLogIndex whose term matches prevLogTerm (5.3)
 				 */
 				int prevLogIndex = ae.getPrevLogIndex();
