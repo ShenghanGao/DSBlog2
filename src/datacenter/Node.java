@@ -3,9 +3,9 @@ package datacenter;
 public class Node {
 	private String IPAddress;
 
-	private int nextIndex = 1;
+	private int nextIndex = 0;
 
-	private int matchIndex = 0;
+	private int matchIndex = -1;
 
 	private int flag = 0;
 
