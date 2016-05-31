@@ -134,10 +134,21 @@ public class AppServer {
 			if (node.getId() == appServer.id)
 				continue;
 
-			if (node.getNextIndex() == appServer.log.size() - 1) {
-				AppendEntriesRPC ae = genAppendEntriesRPC(node);
-				sendMessage(node, ae);
+			// if (node.getNextIndex() == appServer.log.size() - 1) {
+			// AppendEntriesRPC ae = genAppendEntriesRPC(node);
+			// sendMessage(node, ae);
+			// }
+
+			AppendEntriesRPC ae = genAppendEntriesRPC(node);
+
+			if (DEBUG) {
+				System.out.println("recvEntry, AppendEntries: term = " + ae.getTerm() + ", leaderId = "
+						+ ae.getLeaderId() + ", prevLogIndex = " + ae.getPrevLogIndex() + ", prevLogTerm = "
+						+ ae.getPrevLogTerm() + ", leaderCommit = " + ae.getLeaderCommit());
+				System.out.println("recvEntry, send RPC to node " + node.getId() + ".");
 			}
+
+			sendMessage(node, ae);
 		}
 
 		// TODO: Response the client
