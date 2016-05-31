@@ -231,15 +231,18 @@ public class AppServer {
 		int num = appServer.nodes.size();
 		for (int i = 0; i < num; ++i) {
 			if (appServer.id != appServer.nodes.get(i).getId()) {
-				int term = appServer.currentTerm;
-				int leaderId = appServer.id;
-				int prevLogIndex = -1;
-				int prevLogTerm = -1;
-				List<LogEntry> entries = new ArrayList<>();
-				int leaderCommit = appServer.commitIndex;
-				AppendEntriesRPC rpc = new AppendEntriesRPC(term, leaderId, prevLogIndex, prevLogTerm, entries,
-						leaderCommit);
-				sendMessage(appServer.nodes.get(i), rpc);
+				// int term = appServer.currentTerm;
+				// int leaderId = appServer.id;
+				// int prevLogIndex = -1;
+				// int prevLogTerm = -1;
+				// List<LogEntry> entries = new ArrayList<>();
+				// int leaderCommit = appServer.commitIndex;
+				// AppendEntriesRPC rpc = new AppendEntriesRPC(term, leaderId,
+				// prevLogIndex, prevLogTerm, entries,
+				// leaderCommit);
+
+				AppendEntriesRPC ae = genAppendEntriesRPC(appServer.nodes.get(i));
+				sendMessage(appServer.nodes.get(i), ae);
 			}
 		}
 	}
@@ -343,7 +346,7 @@ public class AppServer {
 	// /* we always assume # of servers > 1 */
 	public static void serverPeriodic() {
 		if (appServer.state == ServerState.LEADER) {
-			// sendAppendEntriesToAll();
+			sendAppendEntriesToAll();
 		}
 
 		// appServer.timeElapsed += period;
