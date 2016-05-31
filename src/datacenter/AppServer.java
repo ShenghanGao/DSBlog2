@@ -622,12 +622,12 @@ public class AppServer {
 				success = false;
 			}
 
-			if (success) {
+			int prevLogIndex = ae.getPrevLogIndex();
+			if (success && prevLogIndex >= 0) {
 				/*
 				 * 2. Reply false if log doesn't contain an entry at
 				 * prevLogIndex whose term matches prevLogTerm (5.3)
 				 */
-				int prevLogIndex = ae.getPrevLogIndex();
 				LogEntry entryAtPrevLogIndex = getEntryFromIndex(prevLogIndex);
 				if (entryAtPrevLogIndex == null || entryAtPrevLogIndex.getTerm() != ae.getPrevLogTerm()) {
 					success = false;
