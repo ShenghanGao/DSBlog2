@@ -320,7 +320,7 @@ public class AppServer {
 	// /* we always assume # of servers > 1 */
 	public static void serverPeriodic() {
 		if (appServer.state == ServerState.LEADER) {
-			sendAppendEntriesToAll();
+			// sendAppendEntriesToAll();
 		}
 
 		// appServer.timeElapsed += period;
