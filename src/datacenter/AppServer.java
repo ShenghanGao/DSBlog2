@@ -27,6 +27,8 @@ public class AppServer {
 
 	private static final int electionTimeout = 3000; ///
 
+	private static final boolean DEBUG = true;
+
 	List<String> posts;
 
 	ServerState state;
@@ -43,7 +45,7 @@ public class AppServer {
 
 	private int lastApplied;
 
-	private int timeElapsed;
+	private int timeoutElapsed;
 
 	private List<Node> nodes;
 
@@ -73,6 +75,39 @@ public class AppServer {
 	// return true;
 	// }
 
+	public static LogEntry getEntryFromIndex(int i) {
+		if (i >= appServer.log.size())
+			return null;
+		return appServer.log.get(i);
+	}
+
+	public static List<LogEntry> getEntriesFromIndex(int i) {
+		List<LogEntry> entries = new ArrayList<>();
+		if (i >= appServer.log.size())
+			return entries;
+		return appServer.log.subList(i, appServer.log.size());
+	}
+
+	public static void deleteEntriesFromIndex(int i) {
+		int lastIndex = appServer.log.size() - 1;
+		for (; lastIndex >= i; --lastIndex) {
+			appServer.log.remove(lastIndex);
+		}
+	}
+
+	public static AppendEntriesRPC genAppendEntriesRPC(Node node) {
+		int nextIndex = node.getNextIndex();
+		int prevLogIndex = -1, prevLogTerm = -1;
+		if (nextIndex >= 1) {
+			prevLogIndex = nextIndex - 1;
+			prevLogTerm = getEntryFromIndex(prevLogIndex).getTerm();
+		}
+		List<LogEntry> entries = getEntriesFromIndex(nextIndex);
+		AppendEntriesRPC ae = new AppendEntriesRPC(appServer.currentTerm, appServer.id, prevLogIndex, prevLogTerm,
+				entries, appServer.commitIndex);
+		return ae;
+	}
+
 	public static void sendMessage(Node node, Message rpc) {
 		InetAddress address = null;
 		try {
@@ -87,7 +122,9 @@ public class AppServer {
 			oos.writeObject(rpc);
 			oos.flush();
 			socket.close();
-			System.out.println("RPC sent to node " + node.getId() + " (" + node.getIPAddress() + ":" + DC_PORT + ").");
+			if (DEBUG)
+				System.out.println(
+						"RPC sent to node " + node.getId() + " (" + node.getIPAddress() + ":" + DC_PORT + ").");
 		} catch (ConnectException e) {
 			System.out.println(
 					e.getMessage() + ", possibly no process is listening on " + node.getIPAddress() + ":" + DC_PORT);
@@ -112,7 +149,7 @@ public class AppServer {
 	// }
 
 	public static void sendAppendEntriesToAll() {
-		appServer.timeElapsed = 0;
+		// appServer.timeElapsed = 0;
 		int num = appServer.nodes.size();
 		for (int i = 0; i < num; ++i) {
 			if (appServer.id != appServer.nodes.get(i).getId()) {
@@ -124,15 +161,15 @@ public class AppServer {
 				int leaderCommit = appServer.commitIndex;
 				AppendEntriesRPC rpc = new AppendEntriesRPC(term, leaderId, prevLogIndex, prevLogTerm, entries,
 						leaderCommit);
-				sendMessage(AppServer.appServer.nodes.get(i), rpc);
+				sendMessage(appServer.nodes.get(i), rpc);
 			}
 		}
 	}
-	//
-	// public static void becomeFollower() {
-	// appServer.state = ServerState.FOLLOWER;
-	// }
-	//
+
+	public static void becomeFollower() {
+		appServer.state = ServerState.FOLLOWER;
+	}
+
 	// public static void becomeCandidate() {
 	// appServer.currentTerm += 1;
 	//
@@ -149,7 +186,7 @@ public class AppServer {
 	// /* request vote */
 	// int num = appServer.nodes.size();
 	// for (int i = 0; i < num; ++i)
-	// if (!appServer.nodes.get(i).equals(AppServer.appServer.myIPAddress)) {
+	// if (!appServer.nodes.get(i).equals(appServer.myIPAddress)) {
 	// int term =
 	// !appServer.nodes.get(i).equals(appServer.myIPAddress).currentTerm;
 	// int candidateId = appServer.index;
@@ -301,9 +338,9 @@ public class AppServer {
 			return;
 		}
 
-		System.out.print("My IP address is " + myIPAddress + ", my id is " + appServer.id + ".");
+		System.out.println("My IP address is " + myIPAddress + ", my id is " + appServer.id + ".");
 
-		appServer.state = ServerState.FOLLOWER;
+		becomeFollower();
 
 		// Fix leader
 		if (appServer.id == 0) {
@@ -318,18 +355,12 @@ public class AppServer {
 
 		while (true) {
 			try {
-				AppServer.serverPeriodic();
+				serverPeriodic();
 				Thread.sleep(period);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
 		}
-
-		// try {
-		// listenToDCThread.join();
-		// } catch (InterruptedException e) {
-		// e.printStackTrace();
-		// }
 	}
 
 	public static class ListenToClientsThread extends Thread {
@@ -374,8 +405,7 @@ public class AppServer {
 					switch (message.getType()) {
 					case APPEND_ENTRIES: {
 						Message response = recvAppendEntries(message);
-						// TODO: Send response
-
+						sendMessage(appServer.nodes.get(appServer.currentLeader), response);
 						break;
 					}
 						// case APPEND_ENTRIES_RESPONSE: {
@@ -469,122 +499,145 @@ public class AppServer {
 		// }
 		//
 		private static Message recvAppendEntries(Message message) {
+			appServer.timeoutElapsed = 0;
+
 			AppendEntriesRPC ae = (AppendEntriesRPC) message;
 
-			System.out.println("recvAppendEntries: term = " + ae.getTerm() + ", leaderId = " + ae.getLeaderId()
-					+ ", prevLogIndex = " + ae.getPrevLogIndex() + ", prevLogTerm = " + ae.getPrevLogTerm()
-					+ ", leaderCommit = " + ae.getLeaderCommit());
+			Message response;
 
-			return null;
+			if (DEBUG) {
+				System.out.println("recvAppendEntries: term = " + ae.getTerm() + ", leaderId = " + ae.getLeaderId()
+						+ ", prevLogIndex = " + ae.getPrevLogIndex() + ", prevLogTerm = " + ae.getPrevLogTerm()
+						+ ", leaderCommit = " + ae.getLeaderCommit());
+			}
 
-			// if (AppServer.appServer.state == ServerState.CANDIDATE &&
-			// AppServer.appServer.currentTerm <= ae.getTerm()) {
-			// AppServer.becomeFollower();
-			// }
-			//
-			// boolean success;
-			// // 1
-			// if (ae.getTerm() < AppServer.appServer.currentTerm) {
-			// success = false;
-			// }
-			// // 2
-			// int prevLogIndex = ae.getPrevLogIndex();
-			// if (prevLogIndex >= AppServer.appServer.log.size()) {
-			// success = false;
-			// } else {
-			// LogEntry logEntry = AppServer.appServer.log.get(prevLogIndex);
-			// if (logEntry.getTerm() != ae.getPrevLogTerm()) {
-			// success = false;
-			// deleteEntriesFromIndex(ae.getPrevLogIndex());
-			// }
-			//
-			// }
-			//
-			// // 3
-			// // heartbeat
-			// if (ae.getEntries().size() == 0) {
-			// deleteEntriesFromIndex(ae.getPrevLogIndex());
-			// }
-			//
-			// for (int i = 0; i < ae.getEntries().size(); ++i) {
-			// LogEntry aeEntry = ae.getEntries().get(i);
-			// int existingEntryIndex = ae.getPrevLogIndex() + 1 + i;
-			// LogEntry existingEntry = getEntryFromIndex(existingEntryIndex);
-			// if (existingEntry == null)
-			// break;
-			// else if (existingEntry.getTerm() != aeEntry.getTerm()) {
-			// deleteEntriesFromIndex(existingEntryIndex);
-			// }
-			// }
-			//
-			// // TODO: ???
-			// for (LogEntry e : ae.getEntries()) {
-			// AppServer.appServer.log.add(e);
-			// }
-			// // ???
-			//
-			// // 4
-			// if (ae.getLeaderCommit() > AppServer.appServer.commitIndex) {
-			// AppServer.appServer.commitIndex = Math.min(ae.getLeaderCommit(),
-			// AppServer.appServer.log.size() - 1);
-			// }
-			// success = true;
-			//
-			// Message response = new
-			// AppendEntriesRPCResponse(AppServer.appServer.currentTerm,
-			// success);
-			// return response;
+			boolean success = true;
+			if (appServer.state == ServerState.CANDIDATE && ae.getTerm() == appServer.currentTerm) {
+				becomeFollower();
+			} else if (ae.getTerm() > appServer.currentTerm) {
+				appServer.currentTerm = ae.getTerm();
+				becomeFollower();
+			} else if (ae.getTerm() < appServer.currentTerm) {
+				/* 1. Reply false if term < currentTerm (5.1) */
+				success = false;
+			}
+
+			if (success) {
+				/*
+				 * 2. Reply false if log doesn¡¯t contain an entry at
+				 * prevLogIndex whose term matches prevLogTerm (5.3)
+				 */
+				int prevLogIndex = ae.getPrevLogIndex();
+				LogEntry entryAtPrevLogIndex = getEntryFromIndex(prevLogIndex);
+				if (entryAtPrevLogIndex == null || entryAtPrevLogIndex.getTerm() != ae.getPrevLogTerm()) {
+					success = false;
+					deleteEntriesFromIndex(ae.getPrevLogIndex());
+				}
+			}
+			if (!success) {
+				response = new AppendEntriesRPCResponse(appServer.currentTerm, success, appServer.id,
+						appServer.log.size() - 1);
+				return response;
+			}
+
+			/*
+			 * 3. If an existing entry conflicts with a new one (same index but
+			 * different terms), delete the existing entry and all that follow
+			 * it (5.3)
+			 */
+			for (int i = 0; i < ae.getEntries().size(); ++i) {
+				LogEntry aeEntry = ae.getEntries().get(i);
+				int existingEntryIndex = ae.getPrevLogIndex() + 1 + i;
+				LogEntry existingEntry = getEntryFromIndex(existingEntryIndex);
+				if (existingEntry == null)
+					break;
+				else if (existingEntry.getTerm() != aeEntry.getTerm()) {
+					deleteEntriesFromIndex(existingEntryIndex);
+					// Now existingEntry is null, so break the loop.
+					break;
+				}
+			}
+
+			/* 4. Append any new entries not already in the log */
+			// TODO: Check
+			for (LogEntry e : ae.getEntries()) {
+				appServer.log.add(e);
+			}
+
+			/*
+			 * 5. If leaderCommit > commitIndex, set commitIndex =
+			 * min(leaderCommit, index of last new entry)
+			 */
+			if (ae.getLeaderCommit() > appServer.commitIndex) {
+				appServer.commitIndex = Math.min(ae.getLeaderCommit(), appServer.log.size() - 1);
+			}
+
+			response = new AppendEntriesRPCResponse(appServer.currentTerm, success, appServer.id,
+					appServer.log.size() - 1);
+			return response;
 		}
-		//
-		// private static void recvAppendEntriesResponse(Message message) {
-		// AppendEntriesRPCResponse aer = (AppendEntriesRPCResponse) message;
-		//
-		// if (AppServer.appServer.state != ServerState.LEADER) {
-		//
-		// }
-		//
-		// if (aer.getTerm() > AppServer.appServer.currentTerm) {
-		// AppServer.appServer.currentTerm = aer.getTerm();
-		// AppServer.becomeFollower();
-		// return;
-		// }
-		//
-		// if (aer.isSuccess()) {
-		// Node node = null;// get the node;
-		// node.setNextIndex(aer.getLogIndex() + 1);
-		// node.setMatchIndex(aer.getLogIndex());
-		//
-		// } else {
-		//
-		// }
-		//
-		// /*
-		// * If there exists an N such that N > commitIndex, a majority of
-		// * matchIndex[i] >= N, and log[N].term == currentTerm: set
-		// * commitIndex = N (5.3, 5.4).
-		// */
-		// int lastLogIndex = AppServer.appServer.log.size() - 1;
-		// for (int N = lastLogIndex; N > AppServer.appServer.commitIndex; --N)
-		// {
-		// if (AppServer.appServer.log.get(N).getTerm() ==
-		// AppServer.appServer.currentTerm) {
-		// int counter = 0;
-		// for (Node n : AppServer.appServer.nodes) {
-		// // TODO: Not self
-		//
-		// if (n.getMatchIndex() >= N)
-		// ++counter;
-		//
-		// if (counter >= num) { // wrong, majority
-		// AppServer.appServer.commitIndex = N;
-		// }
-		// }
-		// }
-		// }
-		//
-		// // Send remaining entries
-		//
-		// }
+
+		private static void recvAppendEntriesResponse(Message message) {
+			AppendEntriesRPCResponse aer = (AppendEntriesRPCResponse) message;
+
+			if (appServer.state != ServerState.LEADER) {
+				return;
+			}
+
+			if (aer.getTerm() > appServer.currentTerm) {
+				appServer.currentTerm = aer.getTerm();
+				becomeFollower();
+				return;
+			}
+
+			// if (aer.getTerm() != appServer.currentTerm) {
+			// return;
+			// }
+
+			Node node = appServer.nodes.get(aer.getNodeId());
+
+			if (aer.isSuccess()) {
+				// TODO: To update
+				node.setNextIndex(aer.getLogIndex() + 1);
+				node.setMatchIndex(aer.getLogIndex());
+			} else {
+				node.setNextIndex(node.getNextIndex() - 1);
+				AppendEntriesRPC ae = genAppendEntriesRPC(node);
+				sendMessage(node, ae);
+				return;
+			}
+
+			// TODO: cfg_change
+
+			/*
+			 * If there exists an N such that N > commitIndex, a majority of
+			 * matchIndex[i] >= N, and log[N].term == currentTerm: set
+			 * commitIndex = N (5.3, 5.4).
+			 */
+			int lastLogIndex = appServer.log.size() - 1;
+			for (int N = lastLogIndex; N > appServer.commitIndex
+					&& appServer.log.get(N).getTerm() == appServer.currentTerm; --N) {
+				int cnt = 1;
+				for (Node n : appServer.nodes) {
+					if (n.getId() == appServer.id)
+						continue;
+
+					// TODO: Check
+					if (n.getMatchIndex() >= N)
+						++cnt;
+
+					// TODO: There may be a problem with the number of nodes
+					if (cnt >= appServer.nodes.size() / 2) {
+						appServer.commitIndex = N;
+					}
+				}
+			}
+
+			// Send remaining entries, is this needed?
+			AppendEntriesRPC ae = genAppendEntriesRPC(node);
+			sendMessage(node, ae);
+		}
+
 		//
 		// private Message recvRequestVote(Message message) {
 		// RequestVoteRPC rv = (RequestVoteRPC) message;
@@ -592,14 +645,14 @@ public class AppServer {
 		// boolean voteGranted;
 		//
 		// // 1
-		// if (rv.getTerm() < AppServer.appServer.currentTerm) {
+		// if (rv.getTerm() < appServer.currentTerm) {
 		// voteGranted = false;
 		// }
 		//
 		// // 2
 		// boolean isUpToDate = true;
 		//
-		// int currentIndex = AppServer.appServer.log.size() - 1;
+		// int currentIndex = appServer.log.size() - 1;
 		// LogEntry e = getEntryFromIndex(currentIndex);
 		//
 		// if (e.getTerm() > rv.getLastLogTerm()
@@ -608,49 +661,39 @@ public class AppServer {
 		// isUpToDate = false;
 		// }
 		//
-		// if ((AppServer.appServer.votedFor == null ||
-		// AppServer.appServer.votedFor
+		// if ((appServer.votedFor == null ||
+		// appServer.votedFor
 		// == rv.getCandidateId())
 		// && isUpTodate) {
 		// voteGranted = true;
 		// }
 		//
 		// Message response = new
-		// RequestVoteRPCResponse(AppServer.appServer.currentTerm, voteGranted);
+		// RequestVoteRPCResponse(appServer.currentTerm, voteGranted);
 		// return response;
 		// }
 		//
 		// private void recvRequestVoteResponse(Message message) {
 		// RequestVoteRPCResponse rvr = (RequestVoteRPCResponse) message;
 		//
-		// if (AppServer.appServer.state != ServerState.CANDIDATE) {
+		// if (appServer.state != ServerState.CANDIDATE) {
 		// return;
-		// } else if (AppServer.appServer.currentTerm < rvr.getTerm()) {
-		// AppServer.appServer.currentTerm = rvr.getTerm();
-		// AppServer.becomeFollower();
+		// } else if (appServer.currentTerm < rvr.getTerm()) {
+		// appServer.currentTerm = rvr.getTerm();
+		// becomeFollower();
 		// return;
-		// } else if (AppServer.appServer.currentTerm != rvr.getTerm()) {
+		// } else if (appServer.currentTerm != rvr.getTerm()) {
 		// return;
 		// }
 		//
 		// if (rvr.isVoteGranted()) {
 		// if (is_majority) {
-		// AppServer.becomeLeader();
+		// becomeLeader();
 		// }
 		// }
 		// }
 		//
-		// private static LogEntry getEntryFromIndex(int i) {
-		// if (i >= AppServer.appServer.log.size())
-		// return null;
-		// return AppServer.appServer.log.get(i);
-		// }
-		//
-		// private static void deleteEntriesFromIndex(int i) {
-		// while (i <= AppServer.appServer.log.size()) {
-		// AppServer.appServer.log.remove(AppServer.appServer.log.size() - 1);
-		// }
-		// }
+
 		//
 		// public class ListenToDCSocketHandler implements Runnable {
 		// private Socket connectedSocket;
