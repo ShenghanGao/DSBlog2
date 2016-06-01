@@ -457,8 +457,8 @@ public class AppServer {
 		Thread listenToDCThread = new ListenToDCThread();
 		listenToDCThread.start();
 
+		appServer.timeoutElapsed = 0;
 		while (true) {
-			appServer.timeoutElapsed = 0;
 			try {
 				serverPeriodic();
 				Thread.sleep(period);
