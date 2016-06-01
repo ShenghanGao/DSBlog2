@@ -22,7 +22,7 @@ import java.util.Random;
 public class AppServer {
 	private static AppServer appServer = new AppServer();
 
-	private static final int period = 1000;
+	private static final int period = 4000;
 
 	private static final int DC_LISTEN_TO_CLIENTS_PORT = 8887;
 
@@ -32,7 +32,7 @@ public class AppServer {
 
 	private static final int requestTimeout = 100; ////
 
-	private static final int electionTimeout = 3000; ///
+	private static final int electionTimeout = 12000; ///
 
 	private static final boolean DEBUG = true;
 
@@ -59,6 +59,16 @@ public class AppServer {
 	private int id = -1;
 
 	private int currentLeader;
+
+	public static void printState() {
+		if (appServer.state == ServerState.FOLLOWER) {
+			System.out.println("state: FOLLOWER.");
+		} else if (appServer.state == ServerState.CANDIDATE) {
+			System.out.println("state: CANDIDATE.");
+		} else if (appServer.state == ServerState.LEADER) {
+			System.out.println("state: LEADER.");
+		}
+	}
 
 	public static void printLog() {
 		for (LogEntry e : appServer.log) {
@@ -258,11 +268,17 @@ public class AppServer {
 	}
 
 	public static void becomeFollower() {
+		if (DEBUG)
+			System.out.println("becomeFollower");
+
 		appServer.votedFor = -1;
 		appServer.state = ServerState.FOLLOWER;
 	}
 
 	public static void becomeCandidate() {
+		if (DEBUG)
+			System.out.println("becomeCandidate");
+
 		appServer.currentTerm += 1;
 
 		for (Node node : appServer.nodes) {
@@ -294,6 +310,9 @@ public class AppServer {
 	}
 
 	public static void becomeLeader() {
+		if (DEBUG)
+			System.out.println("becomeLeader");
+
 		appServer.state = ServerState.LEADER;
 
 		int lastLogIndex = appServer.log.size() - 1;
@@ -432,6 +451,7 @@ public class AppServer {
 			try {
 				serverPeriodic();
 				Thread.sleep(period);
+				printState();
 				printLog();
 				// Thread.sleep(period);
 			} catch (InterruptedException e) {
