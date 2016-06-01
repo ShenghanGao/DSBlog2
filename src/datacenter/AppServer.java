@@ -743,11 +743,14 @@ public class AppServer {
 			boolean isUpToDate = true;
 
 			int currentIndex = appServer.log.size() - 1;
-			LogEntry e = getEntryFromIndex(currentIndex);
 
-			if (e.getTerm() > rv.getLastLogTerm()
-					|| (e.getTerm() == rv.getLastLogTerm() && currentIndex > rv.getLastLogIndex())) {
-				isUpToDate = false;
+			if (currentIndex != -1) {
+				LogEntry e = getEntryFromIndex(currentIndex);
+
+				if (e.getTerm() > rv.getLastLogTerm()
+						|| (e.getTerm() == rv.getLastLogTerm() && currentIndex > rv.getLastLogIndex())) {
+					isUpToDate = false;
+				}
 			}
 
 			if ((appServer.votedFor == -1 || appServer.votedFor == rv.getCandidateId()) && isUpToDate) {
