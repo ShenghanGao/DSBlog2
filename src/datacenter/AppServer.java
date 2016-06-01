@@ -370,7 +370,7 @@ public class AppServer {
 		if (appServer.state == ServerState.LEADER) {
 			sendAppendEntriesToAll();
 		} else if (appServer.timeoutElapsed >= electionTimeout) {
-			// electionStart();
+			electionStart();
 		}
 
 		/* commit idx < lastApplied */
