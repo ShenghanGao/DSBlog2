@@ -110,9 +110,6 @@ public class AppServer {
 	}
 
 	public static void handleClientsReq(String req, InetAddress inetAddress) {
-		if (DEBUG)
-			System.out.println("handleClientsReq starts.");
-
 		if (appServer.state != ServerState.LEADER) {
 			if (DEBUG)
 				System.out.println("I am not the leader and I need to redirect this req.");
@@ -474,6 +471,9 @@ public class AppServer {
 					e.printStackTrace();
 				}
 				InetAddress inetAddress = socket.getInetAddress();
+
+				if (DEBUG)
+					System.out.println("Client IP: " + inetAddress.getHostAddress());
 
 				try {
 					socket.close();
