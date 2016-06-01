@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.io.Serializable;
 import java.net.ConnectException;
 import java.net.InetAddress;
@@ -15,15 +17,18 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class AppServer {
 	private static AppServer appServer = new AppServer();
 
 	private static final int period = 4000;
 
-	private static final int CLIENTS_PORT = 8887;
+	private static final int DC_LISTEN_TO_CLIENTS_PORT = 8887;
 
-	private static final int DC_PORT = 8888;
+	private static final int DC_LISTEN_TO_DC_PORT = 8888;
+
+	private static final int CLIENT_LISTEN_TO_DC_PORT = 8888;
 
 	private static final int requestTimeout = 100; ////
 
@@ -73,25 +78,15 @@ public class AppServer {
 	private AppServer() {
 		log = new ArrayList<>();
 		nodes = new ArrayList<>();
+		posts.add("init1");
+		posts.add("init2");
+		posts.add("init3");
+		posts.add("init4");
 	}
 
 	public static AppServer getAppServer() {
 		return appServer;
 	}
-
-	// public boolean sendAppendEntriesRPC(String targetServerIPAddress,
-	// AppendEntriesRPC rpc) {
-	// Socket socket = new Socket(targetServerIPAddress, PORT);
-	// ObjectOutputStream oos = new
-	// ObjectOutputStream(socket.getOutputStream());
-	// oos.writeObject((Message) rpc);
-	//
-	// ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
-	// AppendEntriesRPCResponse aer = (AppendEntriesRPCResponse)
-	// ois.readObject();
-	//
-	// return true;
-	// }
 
 	public static LogEntry getEntryFromIndex(int i) {
 		if (i >= appServer.log.size())
@@ -113,11 +108,11 @@ public class AppServer {
 		}
 	}
 
-	public static void handleClientsReq(String req, Socket socket) {
+	public static void handleClientsReq(String req, InetAddress inetAddress) {
 		if (appServer.state != ServerState.LEADER) {
 			if (DEBUG)
 				System.out.println("I am not the leader and I need to redirect this req.");
-			ClientRequest cr = new ClientRequest(socket.getInetAddress(), req);
+			ClientRequest cr = new ClientRequest(inetAddress, req);
 			sendMessage(appServer.nodes.get(appServer.currentLeader), cr);
 			return;
 		}
@@ -126,7 +121,7 @@ public class AppServer {
 		if (ss[0].compareTo("p") == 0) {
 			recvEntry(ss[1]);
 		} else if (ss[0].compareTo("l") == 0) {
-			lookup(socket);
+			sendLookup(inetAddress);
 		}
 	}
 
@@ -164,11 +159,33 @@ public class AppServer {
 		// TODO: Response the client
 	}
 
-	private static void lookup(Socket socket) {
+	private static void sendLookup(InetAddress inetAddress) {
+		Socket socket = null;
 		try {
-			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+			socket = new Socket(inetAddress, CLIENT_LISTEN_TO_DC_PORT);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		try {
+			OutputStream os = socket.getOutputStream();
+			PrintWriter pw = new PrintWriter(os);
+			pw.println("l");
+			pw.flush();
+
+			if (DEBUG) {
+				System.out.println("sendLookup: l sent.");
+			}
+
+			ObjectOutputStream oos = new ObjectOutputStream(os);
 			oos.writeObject(appServer.posts);
 			oos.flush();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		try {
+			socket.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -196,39 +213,23 @@ public class AppServer {
 		}
 
 		try {
-			Socket socket = new Socket(address, DC_PORT);
+			Socket socket = new Socket(address, DC_LISTEN_TO_DC_PORT);
 			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
 			oos.writeObject(message);
 			oos.flush();
 			socket.close();
 			if (DEBUG)
-				System.out.println(
-						"Message sent to node " + node.getId() + " (" + node.getIPAddress() + ":" + DC_PORT + ").");
+				System.out.println("Message sent to node " + node.getId() + " (" + node.getIPAddress() + ":"
+						+ DC_LISTEN_TO_DC_PORT + ").");
 		} catch (ConnectException e) {
-			System.out.println(
-					e.getMessage() + ", possibly no process is listening on " + node.getIPAddress() + ":" + DC_PORT);
+			System.out.println(e.getMessage() + ", possibly no process is listening on " + node.getIPAddress() + ":"
+					+ DC_LISTEN_TO_DC_PORT);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
-	// public boolean sendAppendEntriesRPC(String targetServerIPAddress,
-	// RequestVoteRPC rpc) {
-	// Socket socket = new Socket(targetServerIPAddress, PORT);
-	// ObjectOutputStream oos = new
-	// ObjectOutputStream(socket.getOutputStream());
-	// oos.writeObject((Message) rpc);
-	//
-	// return true;
-	// }
-
-	// public boolean SendRequestVoteRPC(AppServer server, AppServer
-	// targetServer, RequestVoteRPC rpc) {
-	// return true;
-	// }
-
 	public static void sendAppendEntriesToAll() {
-		appServer.timeElapsed = 0;
 		int num = appServer.nodes.size();
 		for (int i = 0; i < num; ++i) {
 			if (appServer.id != appServer.nodes.get(i).getId()) {
@@ -255,39 +256,41 @@ public class AppServer {
 	public static void becomeCandidate() {
 		appServer.currentTerm += 1;
 
-		/* vote for self */
-		appServer.votedFor = appServer.index;
+		for (Node node : appServer.nodes) {
+			node.setVotedForMe(false);
+		}
 
+		/* vote for self */
+		appServer.votedFor = appServer.id;
 		appServer.currentLeader = -1;
 		appServer.state = ServerState.CANDIDATE;
 
 		Random rn = new Random();
-		appServer.timeElapsed = (electionTimeout - 2 * (rn.nextInt(10000) % electionTimeout)) / 10;
+		appServer.timeoutElapsed = (electionTimeout - 2 * (rn.nextInt(10000) % electionTimeout)) / 10;
 
 		/* request vote */
-		int num = appServer.nodes.size();
-		for (int i = 0; i < num; ++i)
-			if (!appServer.nodes.get(i).equals(appServer.myIPAddress)) {
-				int term = !appServer.nodes.get(i).equals(appServer.myIPAddress).currentTerm;
-				int candidateId = appServer.index;
-				int lastLogIndex = appServer.log.size() - 1;
-				int lastLogTerm = appServer.log.get(lastLogIndex).getTerm();
-				RequestVoteRPC rpc = new RequestVoteRPC(term, candidateId, lastLogIndex, lastLogTerm);
-				SendRequestVoteRPC(this, appServer.nodes.get(i),
-						rpc); /* server to server */
-			}
-	}
-
-	public static void electionStart() {
-		becomeCandidate();
+		for (Node node : appServer.nodes) {
+			if (node.getId() == appServer.id)
+				continue;
+			int term = appServer.currentTerm;
+			int candidateId = appServer.id;
+			int lastLogIndex = appServer.log.size() - 1;
+			int lastLogTerm = appServer.log.get(lastLogIndex).getTerm();
+			RequestVoteRPC rpc = new RequestVoteRPC(term, candidateId, lastLogIndex, lastLogTerm);
+			sendMessage(node, rpc);
+		}
 	}
 
 	public static void becomeLeader() {
 		appServer.state = ServerState.LEADER;
-		int lastLogIndex = appServer.log.size() - 1;
-		int num = appServer.nodes.size();
 
-		// TODO: reset nextIndex matchIndex
+		int lastLogIndex = appServer.log.size() - 1;
+		for (Node node : appServer.nodes) {
+			if (node.getId() == appServer.id)
+				continue;
+			node.setNextIndex(lastLogIndex + 1);
+			node.setMatchIndex(-1);
+		}
 
 		sendAppendEntriesToAll();
 
@@ -319,49 +322,31 @@ public class AppServer {
 		// nextIndex.set(i, prevLogIndex);
 		// }
 		///////////////////////////////////////////////
-	}
 
-	/* update commitIndex */
-	// for (int N = lastLogIndex; N >= appServer.commitIndex; --N) {
-	// int counter = 0;
-	// for (int i = 0; i < num; ++i)
-	// if ((this.nodes.get(i) != this) && appServer.matchIndex.get(i) >= N) {
-	// int term = appServer.log.get(N).getTerm();
-	// if (term == appServer.currentTerm)
-	// counter++;
-	// }
-	// if (counter + 1 > num / 2) { // +1 because we need to add the server
-	// // itself
-	// appServer.commitIndex = N;
-	// break;
-	// }
-	// }
-
-	/* note here we didn't apply the commitIndex to the state-machine */
+		/* note here we didn't apply the commitIndex to the state-machine */
 	}
 
 	/* we always assume # of servers > 1 */
-	public static void serverPeriodic() {
-		// if (appServer.state == ServerState.LEADER) {
-		// sendAppendEntriesToAll();
-		// }
 
-		appServer.timeElapsed += period;
-		//
-		// /* send heartbeat or start a new election */
+	public static void electionStart() {
+		becomeCandidate();
+	}
+
+	public static void serverPeriodic() {
+		appServer.timeoutElapsed += period;
+
+		/* send heartbeat or start a new election */
 		if (appServer.state == ServerState.LEADER) {
 			sendAppendEntriesToAll();
-		} else if (electionTimeout <= appServer.timeElapsed) {
-			ElectionStart();
+		} else if (appServer.timeoutElapsed >= electionTimeout) {
+			// electionStart();
 		}
 
 		/* commit idx < lastApplied */
-		if (appServer.commitIndex > appServer.lastApplied) {
-			while (appServer.lastApplied < appServer.commitIndex) {
-				appServer.lastApplied++;
-				String cmd = appServer.log.get(appServer.lastApplied).getCommand();
-				appServer.posts.add(cmd);
-			}
+		while (appServer.commitIndex > appServer.lastApplied) {
+			++appServer.lastApplied;
+			String cmd = appServer.log.get(appServer.lastApplied).getCommand();
+			appServer.posts.add(cmd);
 		}
 	}
 
@@ -449,7 +434,7 @@ public class AppServer {
 		@Override
 		public void run() {
 			try {
-				listenToClientsSocket = new ServerSocket(CLIENTS_PORT, 5);
+				listenToClientsSocket = new ServerSocket(DC_LISTEN_TO_CLIENTS_PORT, 5);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -470,14 +455,15 @@ public class AppServer {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-
-				handleClientsReq(req, socket);
+				InetAddress inetAddress = socket.getInetAddress();
 
 				try {
 					socket.close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
+
+				handleClientsReq(req, inetAddress);
 			}
 		}
 	}
@@ -488,7 +474,7 @@ public class AppServer {
 		@Override
 		public void run() {
 			try {
-				listenToDCSocket = new ServerSocket(DC_PORT, 5);
+				listenToDCSocket = new ServerSocket(DC_LISTEN_TO_DC_PORT, 5);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -513,14 +499,14 @@ public class AppServer {
 						recvAppendEntriesResponse(message);
 						break;
 					}
-						// case REQUEST_VOTE: {
-						// Message response = recvRequestVote(message);
-						// break;
-						// }
-						// case REQUEST_VOTE_RESPONSE: {
-						// recvRequestVoteResponse(message);
-						// break;
-						// }
+					case REQUEST_VOTE: {
+						recvRequestVote(message);
+						break;
+					}
+					case REQUEST_VOTE_RESPONSE: {
+						recvRequestVoteResponse(message);
+						break;
+					}
 					default: {
 
 					}
@@ -535,7 +521,7 @@ public class AppServer {
 
 		private static void recvClientRequest(Message message) {
 			ClientRequest cr = (ClientRequest) message;
-			Socket socket = new Socket()
+			handleClientsReq(cr.getReq(), cr.getInetAddress());
 		}
 
 		private static Message recvAppendEntries(Message message) {
@@ -575,8 +561,7 @@ public class AppServer {
 				}
 			}
 			if (!success) {
-				response = new AppendEntriesRPCResponse(appServer.currentTerm, success, appServer.id,
-						appServer.log.size() - 1);
+				response = new AppendEntriesRPCResponse(appServer.currentTerm, success, appServer.id, -1);
 				return response;
 			}
 
@@ -642,7 +627,6 @@ public class AppServer {
 			Node node = appServer.nodes.get(aer.getNodeId());
 
 			if (aer.isSuccess()) {
-				// TODO: To update
 				node.setNextIndex(aer.getLogIndex() + 1);
 				node.setMatchIndex(aer.getLogIndex());
 			} else {
@@ -672,8 +656,7 @@ public class AppServer {
 						++cnt;
 
 					// TODO: There may be a problem with the number of nodes
-					// TODO: wrong number
-					if (cnt >= appServer.nodes.size() / 2) {
+					if (cnt >= appServer.nodes.size() / 2 + 1) {
 						appServer.commitIndex = N;
 					}
 				}
@@ -692,14 +675,17 @@ public class AppServer {
 				becomeFollower();
 			}
 
-			boolean voteGranted;
+			boolean voteGranted = false;
 
-			// 1. Reply false if term < currentTerm (5.1)
+			/* 1. Reply false if term < currentTerm (5.1) */
 			if (rv.getTerm() < appServer.currentTerm) {
 				voteGranted = false;
 			}
 
-			// 2
+			/*
+			 * 2. If votedFor is null or candidateId, and candidate's log is at
+			 * least as up-to-date as receiver's log, grant vote (5.2, 5.4)
+			 */
 			boolean isUpToDate = true;
 
 			int currentIndex = appServer.log.size() - 1;
@@ -710,15 +696,15 @@ public class AppServer {
 				isUpToDate = false;
 			}
 
-			if ((appServer.votedFor == -1 || appServer.votedFor == rv.getCandidateId()) && isUpTodate) {
+			if ((appServer.votedFor == -1 || appServer.votedFor == rv.getCandidateId()) && isUpToDate) {
 				voteGranted = true;
 			}
 
-			Message response = new RequestVoteRPCResponse(appServer.currentTerm, voteGranted);
-			return response;
+			Message response = new RequestVoteRPCResponse(appServer.currentTerm, voteGranted, appServer.id);
+			sendMessage(appServer.nodes.get(rv.getCandidateId()), response);
 		}
 
-		private void recvRequestVoteResponse(Message message) {
+		private static void recvRequestVoteResponse(Message message) {
 			RequestVoteRPCResponse rvr = (RequestVoteRPCResponse) message;
 
 			if (appServer.state != ServerState.CANDIDATE) {
@@ -732,60 +718,22 @@ public class AppServer {
 			}
 
 			if (rvr.isVoteGranted()) {
-				if (is_majority) {
+				Node node = appServer.nodes.get(rvr.getNodeId());
+				node.setVotedForMe(true);
+				if (isMajority()) {
 					becomeLeader();
 				}
 			}
 		}
 
-		//
-		// public class ListenToDCSocketHandler implements Runnable {
-		// private Socket connectedSocket;
-		//
-		// public ListenToDCSocketHandler(Socket connectedSocket) {
-		// this.connectedSocket = connectedSocket;
-		// }
-		//
-		// @Override
-		// public void run() {
-		// // Message message = null;
-		// // try {
-		// // ObjectInputStream ois = new
-		// // ObjectInputStream(connectedSocket.getInputStream());
-		// // message = (Message) ois.readObject();
-		// // } catch (IOException | ClassNotFoundException e) {
-		// // e.printStackTrace();
-		// // }
-		// //
-		// // switch (message.getType()) {
-		// // case APPEND_ENTRIES: {
-		// // Message response = recvAppendEntries(message);
-		// // // TODO: Send response
-		// //
-		// // break;
-		// // }
-		// // case APPEND_ENTRIES_RESPONSE: {
-		// // recvAppendEntriesResponse(message);
-		// // break;
-		// // }
-		// // case REQUEST_VOTE: {
-		// // Message response = recvRequestVote(message);
-		// // break;
-		// // }
-		// // case REQUEST_VOTE_RESPONSE: {
-		// // recvRequestVoteResponse(message);
-		// // break;
-		// // }
-		// // default: {
-		// //
-		// // }
-		// // }
-		//
-		// // ObjectOutputStream oos = new
-		// // ObjectOutputStream(connectedSocket.getOutputStream());
-		//
-		// }
-
-		// }
+		private static boolean isMajority() {
+			int majority = appServer.nodes.size() / 2 + 1;
+			int cnt = 0;
+			for (Node node : appServer.nodes) {
+				if (node.isVotedForMe())
+					++cnt;
+			}
+			return cnt >= majority;
+		}
 	}
 }

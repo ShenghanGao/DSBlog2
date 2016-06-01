@@ -7,6 +7,8 @@ public class Node {
 
 	private int matchIndex = -1;
 
+	private boolean votedForMe = false;
+
 	private int flag = 0;
 
 	private int id;
@@ -50,5 +52,13 @@ public class Node {
 
 	public int getId() {
 		return id;
+	}
+
+	public boolean isVotedForMe() {
+		return votedForMe;
+	}
+
+	public void setVotedForMe(boolean votedForMe) {
+		this.votedForMe = votedForMe;
 	}
 }
