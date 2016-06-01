@@ -284,8 +284,10 @@ public class AppServer {
 	}
 
 	public static void becomeCandidate() {
-		if (DEBUG)
+		if (DEBUG) {
 			System.out.println("becomeCandidate");
+			System.out.println("currentTerm = " + appServer.currentTerm);
+		}
 
 		appServer.currentTerm += 1;
 
@@ -609,7 +611,7 @@ public class AppServer {
 				LogEntry entryAtPrevLogIndex = getEntryFromIndex(prevLogIndex);
 				if (entryAtPrevLogIndex == null || entryAtPrevLogIndex.getTerm() != ae.getPrevLogTerm()) {
 					success = false;
-					deleteEntriesFromIndex(ae.getPrevLogIndex());
+					deleteEntriesFromIndex(prevLogIndex);
 				}
 			}
 			if (!success) {
