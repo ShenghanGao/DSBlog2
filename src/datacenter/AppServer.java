@@ -110,6 +110,9 @@ public class AppServer {
 	}
 
 	public static void handleClientsReq(String req, InetAddress inetAddress) {
+		if (DEBUG)
+			System.out.println("handleClientsReq starts.");
+
 		if (appServer.state != ServerState.LEADER) {
 			if (DEBUG)
 				System.out.println("I am not the leader and I need to redirect this req.");
@@ -462,6 +465,11 @@ public class AppServer {
 					InputStreamReader isr = new InputStreamReader(socket.getInputStream());
 					BufferedReader br = new BufferedReader(isr);
 					req = br.readLine();
+
+					if (DEBUG) {
+						System.out.println("req = " + req);
+					}
+
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
