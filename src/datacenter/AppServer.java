@@ -163,6 +163,8 @@ public class AppServer {
 	private static void sendLookup(InetAddress inetAddress) {
 		Socket socket = null;
 		try {
+			if (DEBUG)
+				System.out.println("Client IP: " + inetAddress.getHostAddress());
 			socket = new Socket(inetAddress, CLIENT_LISTEN_TO_DC_PORT);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -471,9 +473,6 @@ public class AppServer {
 					e.printStackTrace();
 				}
 				InetAddress inetAddress = socket.getInetAddress();
-
-				if (DEBUG)
-					System.out.println("Client IP: " + inetAddress.getHostAddress());
 
 				try {
 					socket.close();
