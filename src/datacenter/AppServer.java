@@ -22,7 +22,7 @@ import java.util.Random;
 public class AppServer {
 	private static AppServer appServer = new AppServer();
 
-	private static final int period = 2000;
+	private static final int period = 10000;
 
 	private static final int DC_LISTEN_TO_CLIENTS_PORT = 8887;
 
@@ -32,7 +32,7 @@ public class AppServer {
 
 	private static final int requestTimeout = 100; ////
 
-	private static final int electionTimeout = 10000; ///
+	private static final int electionTimeout = 5 * period; ///
 
 	private static final boolean DEBUG = true;
 
@@ -172,7 +172,7 @@ public class AppServer {
 				System.out.println("recvEntry, send RPC to node " + node.getId() + ".");
 			}
 
-			sendMessage(node, ae);
+			// sendMessage(node, ae);
 		}
 
 		// TODO: Response the client
@@ -304,7 +304,7 @@ public class AppServer {
 		appServer.state = ServerState.CANDIDATE;
 
 		Random rn = new Random();
-		appServer.timeoutElapsed = (electionTimeout - 2 * (rn.nextInt(50000) % electionTimeout)) / 2;
+		appServer.timeoutElapsed = (electionTimeout - 2 * (rn.nextInt(5 * electionTimeout) % electionTimeout)) / 2;
 
 		/* request vote */
 		for (Node node : appServer.nodes) {
