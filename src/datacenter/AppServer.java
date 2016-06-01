@@ -86,6 +86,14 @@ public class AppServer {
 	}
 
 	private AppServer() {
+		state = ServerState.FOLLOWER;
+		currentTerm = 1;
+		votedFor = -1;
+		commitIndex = -1;
+		lastApplied = -1;
+		id = -1;
+		currentLeader = -1;
+
 		log = new ArrayList<>();
 		nodes = new ArrayList<>();
 		posts = new ArrayList<>();
@@ -294,7 +302,7 @@ public class AppServer {
 		appServer.state = ServerState.CANDIDATE;
 
 		Random rn = new Random();
-		appServer.timeoutElapsed = (electionTimeout - 2 * (rn.nextInt(10000) % electionTimeout)) / 10;
+		appServer.timeoutElapsed = (electionTimeout - 2 * (rn.nextInt(10000) % electionTimeout)) / 20;
 
 		/* request vote */
 		for (Node node : appServer.nodes) {
@@ -303,7 +311,9 @@ public class AppServer {
 			int term = appServer.currentTerm;
 			int candidateId = appServer.id;
 			int lastLogIndex = appServer.log.size() - 1;
-			int lastLogTerm = appServer.log.get(lastLogIndex).getTerm();
+			int lastLogTerm = -1;
+			if (lastLogIndex >= 0)
+				lastLogTerm = appServer.log.get(lastLogIndex).getTerm();
 			RequestVoteRPC rpc = new RequestVoteRPC(term, candidateId, lastLogIndex, lastLogTerm);
 			sendMessage(node, rpc);
 		}
@@ -448,6 +458,7 @@ public class AppServer {
 		listenToDCThread.start();
 
 		while (true) {
+			appServer.timeoutElapsed = 0;
 			try {
 				serverPeriodic();
 				Thread.sleep(period);
