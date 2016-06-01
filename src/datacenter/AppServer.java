@@ -32,7 +32,7 @@ public class AppServer {
 
 	private static final int requestTimeout = 100; ////
 
-	private static final int electionTimeout = 6000; ///
+	private static final int electionTimeout = 10000; ///
 
 	private static final boolean DEBUG = true;
 
@@ -304,7 +304,7 @@ public class AppServer {
 		appServer.state = ServerState.CANDIDATE;
 
 		Random rn = new Random();
-		appServer.timeoutElapsed = (electionTimeout - 2 * (rn.nextInt(10000) % electionTimeout)) / 20;
+		appServer.timeoutElapsed = (electionTimeout - 2 * (rn.nextInt(50000) % electionTimeout)) / 2;
 
 		/* request vote */
 		for (Node node : appServer.nodes) {
