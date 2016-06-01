@@ -448,6 +448,10 @@ public class AppServer {
 				Socket socket = null;
 				try {
 					socket = listenToClientsSocket.accept();
+
+					if (DEBUG)
+						System.out.println("ListenToClientsThread accepted!");
+
 				} catch (IOException e) {
 					e.printStackTrace();
 					continue;
