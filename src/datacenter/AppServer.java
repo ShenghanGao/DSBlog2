@@ -181,6 +181,11 @@ public class AppServer {
 			ObjectOutputStream oos = new ObjectOutputStream(os);
 			oos.writeObject(appServer.posts);
 			oos.flush();
+
+			if (DEBUG) {
+				System.out.println("sendLookup: posts sent.");
+			}
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
