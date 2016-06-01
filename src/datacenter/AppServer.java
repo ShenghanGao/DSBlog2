@@ -78,6 +78,7 @@ public class AppServer {
 	private AppServer() {
 		log = new ArrayList<>();
 		nodes = new ArrayList<>();
+		posts = new ArrayList<>();
 		posts.add("init1");
 		posts.add("init2");
 		posts.add("init3");
