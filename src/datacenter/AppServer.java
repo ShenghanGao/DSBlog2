@@ -22,7 +22,7 @@ import java.util.Random;
 public class AppServer {
 	private static AppServer appServer = new AppServer();
 
-	private static final int period = 4000;
+	private static final int period = 1000;
 
 	private static final int DC_LISTEN_TO_CLIENTS_PORT = 8887;
 
@@ -258,6 +258,7 @@ public class AppServer {
 	}
 
 	public static void becomeFollower() {
+		appServer.votedFor = -1;
 		appServer.state = ServerState.FOLLOWER;
 	}
 
@@ -265,7 +266,10 @@ public class AppServer {
 		appServer.currentTerm += 1;
 
 		for (Node node : appServer.nodes) {
-			node.setVotedForMe(false);
+			if (node.getId() == appServer.id)
+				node.setVotedForMe(true);
+			else
+				node.setVotedForMe(false);
 		}
 
 		/* vote for self */
@@ -360,7 +364,7 @@ public class AppServer {
 
 	/*
 	 * thundarr.cs.ucsb.edu: 128.111.43.40, optimus.cs.ucsb.edu: 128.111.43.41,
-	 * megatron.cs.ucsb.edu: 128.111.43.42
+	 * megatron.cs.ucsb.edu: 128.111.43.42, tygra.cs.ucsb.edu: 128.111.43.43
 	 */
 	public static void main(String[] args) {
 		String IPAddressesFile = "./IPAddresses2";
@@ -412,10 +416,10 @@ public class AppServer {
 
 		// Fix leader
 		if (appServer.id == 0) {
-			appServer.state = ServerState.LEADER;
+			// appServer.state = ServerState.LEADER;
 		}
 
-		appServer.currentLeader = 0;
+		appServer.currentLeader = -1;
 		appServer.currentTerm = 1;
 
 		Thread listenToClientsThread = new Thread(new ListenToClientsThread());
@@ -429,7 +433,7 @@ public class AppServer {
 				serverPeriodic();
 				Thread.sleep(period);
 				printLog();
-				Thread.sleep(period);
+				// Thread.sleep(period);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
@@ -582,6 +586,8 @@ public class AppServer {
 				return response;
 			}
 
+			appServer.currentLeader = ae.getLeaderId();
+
 			/*
 			 * 3. If an existing entry conflicts with a new one (same index but
 			 * different terms), delete the existing entry and all that follow
@@ -715,6 +721,7 @@ public class AppServer {
 
 			if ((appServer.votedFor == -1 || appServer.votedFor == rv.getCandidateId()) && isUpToDate) {
 				voteGranted = true;
+				appServer.votedFor = rv.getCandidateId();
 			}
 
 			Message response = new RequestVoteRPCResponse(appServer.currentTerm, voteGranted, appServer.id);
