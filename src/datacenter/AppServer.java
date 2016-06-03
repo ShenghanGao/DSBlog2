@@ -127,17 +127,18 @@ public class AppServer {
 	}
 
 	public static void handleClientsReq(String req, InetAddress inetAddress) {
-		if (appServer.state != ServerState.LEADER) {
-			if (DEBUG)
-				System.out.println("I am not the leader and I need to redirect this req.");
-			ClientRequest cr = new ClientRequest(inetAddress, req);
-			sendMessage(appServer.nodes.get(appServer.currentLeader), cr);
-			return;
-		}
-
 		String[] ss = req.split(" ", 2);
+
 		if (ss[0].compareTo("p") == 0) {
-			recvEntry(ss[1]);
+			if (appServer.state != ServerState.LEADER) {
+				if (DEBUG)
+					System.out.println("I am not the leader and I need to redirect this req.");
+				ClientRequest cr = new ClientRequest(inetAddress, req);
+				sendMessage(appServer.nodes.get(appServer.currentLeader), cr);
+				return;
+			} else {
+				recvEntry(ss[1]);
+			}
 		} else if (ss[0].compareTo("l") == 0) {
 			sendLookup(inetAddress);
 		}
