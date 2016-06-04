@@ -677,6 +677,7 @@ public class AppServer {
 		}
 		if (appServer.id == -1) {
 			System.out.println("The IP address of this machine (" + myIPAddress + ") is not in the IP address file!");
+			System.out.println("I am not in the initial configuration!");
 			// return;
 		}
 
