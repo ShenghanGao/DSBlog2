@@ -844,6 +844,11 @@ public class AppServer {
 		private static void recvRequestVote(Message message) {
 			RequestVoteRPC rv = (RequestVoteRPC) message;
 
+			if (DEBUG) {
+				System.out.println("recvRequestVote: term = " + rv.getTerm() + ", candidateId = " + rv.getCandidateId()
+						+ ", lastLogIndex = " + rv.getLastLogIndex() + ", lastLogTerm = " + rv.getLastLogTerm());
+			}
+
 			int currentTerm = readCurrentTermFile();
 
 			if (rv.getTerm() > currentTerm) {
@@ -888,6 +893,11 @@ public class AppServer {
 
 		private static void recvRequestVoteResponse(Message message) {
 			RequestVoteRPCResponse rvr = (RequestVoteRPCResponse) message;
+
+			if (DEBUG) {
+				System.out.println("recvRequestVoteResponse: term = " + rvr.getTerm() + ", isVoteGranted = "
+						+ rvr.isVoteGranted() + ", nodeId = " + rvr.getNodeId());
+			}
 
 			int currentTerm = readCurrentTermFile();
 
