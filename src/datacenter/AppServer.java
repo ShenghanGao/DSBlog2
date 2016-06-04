@@ -387,6 +387,10 @@ public class AppServer {
 				// leaderCommit);
 
 				AppendEntriesRPC ae = genAppendEntriesRPC(appServer.nodes.get(i));
+
+				if (DEBUG)
+					System.out.println("Now send heartbeat to node " + i);
+
 				sendMessage(appServer.nodes.get(i), ae);
 			}
 		}
@@ -396,6 +400,7 @@ public class AppServer {
 		if (DEBUG)
 			System.out.println("becomeFollower");
 
+		appServer.timeoutElapsed = 0;
 		writeVotedForFile(-1);
 		appServer.state = ServerState.FOLLOWER;
 	}
@@ -524,6 +529,7 @@ public class AppServer {
 			e.printStackTrace();
 		}
 
+		System.out.println("args.length = " + args.length);
 		if (args.length == 0) {
 			appServer = new AppServer(false);
 		} else {
