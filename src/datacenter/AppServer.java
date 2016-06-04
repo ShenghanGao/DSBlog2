@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Random;
 
 public class AppServer {
-	private static AppServer appServer = new AppServer();
+	private static AppServer appServer;
 
 	private static final int period = 10000;
 
@@ -172,7 +172,7 @@ public class AppServer {
 		System.out.println("End of entries\n");
 	}
 
-	private AppServer() {
+	private AppServer(boolean toRecover) {
 		InetAddress inetAddress = null;
 		try {
 			inetAddress = InetAddress.getLocalHost();
@@ -183,14 +183,18 @@ public class AppServer {
 		genFilenames(myIPAddress);
 
 		state = ServerState.FOLLOWER;
-		writeCurrentTermFile(1);
-		writeVotedForFile(-1);
+
 		commitIndex = -1;
 		lastApplied = -1;
 		id = -1;
 		currentLeader = -1;
 
-		writeLogFile(new ArrayList<>());
+		if (!toRecover) {
+			writeCurrentTermFile(1);
+			writeVotedForFile(-1);
+			writeLogFile(new ArrayList<>());
+		}
+
 		nodes = new ArrayList<>();
 		posts = new ArrayList<>();
 		posts.add("init1");
@@ -511,6 +515,12 @@ public class AppServer {
 			br = new BufferedReader(new FileReader(IPAddressesFile));
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
+		}
+
+		if (args.length == 0) {
+			appServer = new AppServer(false);
+		} else {
+			appServer = new AppServer(true);
 		}
 
 		String line;
