@@ -35,12 +35,6 @@ public class AppServer {
 
 	private static final boolean DEBUG = true;
 
-	private static StringBuilder currentTermFilenameBuilder = new StringBuilder("currentTerm.txt");
-
-	private static StringBuilder votedForFilenameBuilder = new StringBuilder("votedFor.txt");
-
-	private static StringBuilder logFilenameBuilder = new StringBuilder("log.txt");
-
 	private static String currentTermFilename;
 
 	private static String votedForFilename;
@@ -66,11 +60,16 @@ public class AppServer {
 	private int currentLeader;
 
 	public static void genFilenames(String IPAddress) {
-		currentTermFilenameBuilder.insert(0, IPAddress + ".");
+		StringBuilder currentTermFilenameBuilder = new StringBuilder(".currentTerm.txt");
+		currentTermFilenameBuilder.insert(0, IPAddress);
 		currentTermFilename = currentTermFilenameBuilder.toString();
-		votedForFilenameBuilder.insert(0, IPAddress + ".");
+
+		StringBuilder votedForFilenameBuilder = new StringBuilder(".votedFor.txt");
+		votedForFilenameBuilder.insert(0, IPAddress);
 		votedForFilename = votedForFilenameBuilder.toString();
-		logFilenameBuilder.insert(0, IPAddress + ".");
+
+		StringBuilder logFilenameBuilder = new StringBuilder(".log.txt");
+		logFilenameBuilder.insert(0, IPAddress);
 		logFilename = logFilenameBuilder.toString();
 	}
 
