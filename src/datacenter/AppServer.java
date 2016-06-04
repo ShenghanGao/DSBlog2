@@ -157,7 +157,7 @@ public class AppServer {
 		int currentTerm = readCurrentTermFile();
 		System.out.println("currentTerm = " + currentTerm);
 
-		System.out.println("currentLeader = " + currentLeader);
+		System.out.println("currentLeader = " + appServer.currentLeader);
 	}
 
 	public static void printLog() {
