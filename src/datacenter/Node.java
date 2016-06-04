@@ -9,12 +9,13 @@ public class Node {
 
 	private boolean votedForMe = false;
 
-	private int flag = 0;
+	private int flag;
 
 	private int id;
 
 	public Node(String IPAddress, int id) {
 		this.IPAddress = IPAddress;
+		this.flag = 1;
 		this.id = id;
 	}
 

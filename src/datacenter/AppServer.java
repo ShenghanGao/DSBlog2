@@ -35,11 +35,17 @@ public class AppServer {
 
 	private static final boolean DEBUG = true;
 
-	private static final String currentTermFilename = "currentTerm.txt";
+	private static StringBuilder currentTermFilenameBuilder = new StringBuilder("currentTerm.txt");
 
-	private static final String votedForFilename = "votedFor.txt";
+	private static StringBuilder votedForFilenameBuilder = new StringBuilder("votedFor.txt");
 
-	private static final String logFilename = "log.txt";
+	private static StringBuilder logFilenameBuilder = new StringBuilder("log.txt");
+
+	private static String currentTermFilename;
+
+	private static String votedForFilename;
+
+	private static String logFilename;
 
 	List<String> posts;
 
@@ -58,6 +64,15 @@ public class AppServer {
 	private int id = -1;
 
 	private int currentLeader;
+
+	public static void genFilenames(String IPAddress) {
+		currentTermFilenameBuilder.insert(0, IPAddress + ".");
+		currentTermFilename = currentTermFilenameBuilder.toString();
+		votedForFilenameBuilder.insert(0, IPAddress + ".");
+		votedForFilename = votedForFilenameBuilder.toString();
+		logFilenameBuilder.insert(0, IPAddress + ".");
+		logFilename = logFilenameBuilder.toString();
+	}
 
 	public static int readCurrentTermFile() {
 		int currentTerm = -1;
@@ -159,6 +174,15 @@ public class AppServer {
 	}
 
 	private AppServer() {
+		InetAddress inetAddress = null;
+		try {
+			inetAddress = InetAddress.getLocalHost();
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		}
+		String myIPAddress = inetAddress.getHostAddress();
+		genFilenames(myIPAddress);
+
 		state = ServerState.FOLLOWER;
 		writeCurrentTermFile(1);
 		writeVotedForFile(-1);
