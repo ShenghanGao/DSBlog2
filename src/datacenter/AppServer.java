@@ -171,11 +171,11 @@ public class AppServer {
 		List<LogEntry> log = readLogFile();
 		for (LogEntry e : log) {
 			if (e.getType() == LogEntryType.POST) {
-				System.out.println(e.getContents());
+				System.out.println("term = " + e.getTerm() + "contents = " + e.getContents());
 			} else if (e.getType() == LogEntryType.C_OLD_NEW) {
-				System.out.println("C_OLD_NEW: " + e.getContents());
+				System.out.println("C_OLD_NEW: term = " + e.getTerm() + "contents = " + e.getContents());
 			} else if (e.getType() == LogEntryType.C_NEW) {
-				System.out.println("C_NEW: " + e.getContents());
+				System.out.println("C_NEW: term = " + e.getTerm() + "contents = " + e.getContents());
 			}
 		}
 		System.out.println("\n");
@@ -229,8 +229,6 @@ public class AppServer {
 
 		nodes = new ArrayList<>();
 		posts = new ArrayList<>();
-		posts.add("init1");
-		posts.add("init2");
 	}
 
 	public static AppServer getAppServer() {
@@ -504,16 +502,6 @@ public class AppServer {
 		for (int i = 0; i < num; ++i) {
 			if (!appServer.IPAddress.equals(appServer.nodes.get(i).getIPAddress())
 					&& isInConfig(appServer.nodes.get(i))) {
-				// int term = appServer.currentTerm;
-				// int leaderId = appServer.id;
-				// int prevLogIndex = -1;
-				// int prevLogTerm = -1;
-				// List<LogEntry> entries = new ArrayList<>();
-				// int leaderCommit = appServer.commitIndex;
-				// AppendEntriesRPC rpc = new AppendEntriesRPC(term, leaderId,
-				// prevLogIndex, prevLogTerm, entries,
-				// leaderCommit);
-
 				AppendEntriesRPC ae = genAppendEntriesRPC(appServer.nodes.get(i));
 
 				if (DEBUG)
@@ -585,6 +573,7 @@ public class AppServer {
 
 		appServer.state = ServerState.LEADER;
 		appServer.currentLeader = appServer.id;
+		writeVotedForFile(-1);
 
 		int lastLogIndex = readLogFile().size() - 1;
 		for (Node node : appServer.nodes) {
@@ -643,8 +632,10 @@ public class AppServer {
 		List<LogEntry> log = readLogFile();
 		while (appServer.commitIndex > appServer.lastApplied) {
 			++appServer.lastApplied;
-			String cmd = log.get(appServer.lastApplied).getContents();
-			appServer.posts.add(cmd);
+			if (log.get(appServer.lastApplied).getType() == LogEntryType.POST) {
+				String contents = log.get(appServer.lastApplied).getContents();
+				appServer.posts.add(contents);
+			}
 		}
 	}
 
@@ -999,7 +990,7 @@ public class AppServer {
 					if (!isInConfig(n))
 						continue;
 
-					if (n.getId() == appServer.id) {
+					if (n.getIPAddress().equals(appServer.IPAddress)) {
 						if ((n.getFlag() & 1) > 0)
 							++cntOld;
 						if ((n.getFlag() & (1 << 1)) > 0)
