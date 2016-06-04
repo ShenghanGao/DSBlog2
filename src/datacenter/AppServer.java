@@ -156,6 +156,8 @@ public class AppServer {
 		}
 		int currentTerm = readCurrentTermFile();
 		System.out.println("currentTerm = " + currentTerm);
+
+		System.out.println("currentLeader = " + currentLeader);
 	}
 
 	public static void printLog() {
@@ -677,8 +679,10 @@ public class AppServer {
 					}
 					case APPEND_ENTRIES: {
 						Message response = recvAppendEntries(message);
-						if (appServer.currentLeader != -1)
+						if (appServer.currentLeader == -1) {
+						} else {
 							sendMessage(appServer.nodes.get(appServer.currentLeader), response);
+						}
 						break;
 					}
 					case APPEND_ENTRIES_RESPONSE: {
