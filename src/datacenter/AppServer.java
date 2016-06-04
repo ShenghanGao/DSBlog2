@@ -945,6 +945,7 @@ public class AppServer {
 
 			if (aer.getTerm() > currentTerm) {
 				writeCurrentTermFile(aer.getTerm());
+				appServer.currentLeader = -1;
 				becomeFollower();
 				return;
 			}
@@ -1021,7 +1022,9 @@ public class AppServer {
 				recvEntry("cn", log.get(appServer.cfgChangeLogIdx).getContents());
 			} else if (appServer.cfgChangeLogIdx != -1
 					&& log.get(appServer.cfgChangeLogIdx).getType() == LogEntryType.C_NEW
-					&& appServer.commitIndex >= appServer.cfgChangeLogIdx) {
+					&& appServer.commitIndex >= appServer.cfgChangeLogIdx
+					&& !isInConfig(appServer.nodes.get(appServer.id))) {
+				appServer.currentLeader = -1;
 				becomeFollower();
 			}
 
