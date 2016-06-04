@@ -148,7 +148,7 @@ public class AppServer {
 		}
 	}
 
-	public static void printState() {
+	public static void printStates() {
 		if (appServer.state == ServerState.FOLLOWER) {
 			System.out.println("state: FOLLOWER.");
 		} else if (appServer.state == ServerState.CANDIDATE) {
@@ -158,7 +158,7 @@ public class AppServer {
 		}
 		int currentTerm = readCurrentTermFile();
 		System.out.println("currentTerm = " + currentTerm);
-
+		System.out.println("id = " + appServer.id);
 		System.out.println("currentLeader = " + appServer.currentLeader);
 	}
 
@@ -707,7 +707,7 @@ public class AppServer {
 			try {
 				serverPeriodic();
 				Thread.sleep(period);
-				printState();
+				printStates();
 				printLog();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
@@ -898,12 +898,6 @@ public class AppServer {
 			 */
 			if (ae.getLeaderCommit() > appServer.commitIndex) {
 				appServer.commitIndex = Math.min(ae.getLeaderCommit(), log.size() - 1);
-			}
-
-			if (appServer.cfgChangeLogIdx != -1
-					&& log.get(appServer.cfgChangeLogIdx).getType() == LogEntryType.C_OLD_NEW
-					&& appServer.commitIndex >= appServer.cfgChangeLogIdx) {
-				recvEntry("cn", log.get(appServer.cfgChangeLogIdx).getContents());
 			}
 
 			response = new AppendEntriesRPCResponse(currentTerm, success, appServer.id, log.size() - 1);
