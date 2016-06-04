@@ -274,9 +274,20 @@ public class AppServer {
 		List<Node> li = new ArrayList<>();
 		String[] ss = contents.split("\\s+");
 
+		if (DEBUG) {
+			System.out.println("New IP addresses: ");
+		}
 		for (int i = 1; i < ss.length; ++i) {
+			if (DEBUG) {
+				System.out.println(ss[i]);
+			}
+
 			Node node = new Node(ss[i], -1);
 			li.add(node);
+		}
+
+		if (DEBUG) {
+			System.out.println();
 		}
 
 		return li;
@@ -666,7 +677,7 @@ public class AppServer {
 		}
 		if (appServer.id == -1) {
 			System.out.println("The IP address of this machine (" + myIPAddress + ") is not in the IP address file!");
-			return;
+			// return;
 		}
 
 		System.out.println("My IP address is " + myIPAddress + ", my id is " + appServer.id + ".");
