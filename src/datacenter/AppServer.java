@@ -1,7 +1,9 @@
 package datacenter;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -29,23 +31,23 @@ public class AppServer {
 
 	private static final int CLIENT_LISTEN_TO_DC_PORT = 8888;
 
-	private static final int requestTimeout = 100; ////
-
 	private static final int electionTimeout = 5 * period; ///
 
 	private static final boolean DEBUG = true;
+
+	private static final String currentTermFilename = "currentTerm.txt";
+
+	private static final String votedForFilename = "votedFor.txt";
+
+	private static final String logFilename = "log.txt";
 
 	List<String> posts;
 
 	ServerState state;
 
-	private int currentTerm;
-
-	private int votedFor = -1;
-
 	private boolean isVoting;
 
-	private List<LogEntry> log;
+	// private List<LogEntry> log;
 
 	private int commitIndex;
 
@@ -59,6 +61,79 @@ public class AppServer {
 
 	private int currentLeader;
 
+	public static int readCurrentTermFile() {
+		int currentTerm = -1;
+		try {
+			FileInputStream fis = new FileInputStream(currentTermFilename);
+			ObjectInputStream ois = new ObjectInputStream(fis);
+			currentTerm = ois.readInt();
+			ois.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return currentTerm;
+	}
+
+	public static void writeCurrentTermFile(int currentTerm) {
+		try {
+			FileOutputStream fos = new FileOutputStream(currentTermFilename);
+			ObjectOutputStream oos = new ObjectOutputStream(fos);
+			oos.writeInt(currentTerm);
+			oos.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static int readVotedForFile() {
+		int votedFor = -1;
+		try {
+			FileInputStream fis = new FileInputStream(votedForFilename);
+			ObjectInputStream ois = new ObjectInputStream(fis);
+			votedFor = ois.readInt();
+			ois.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return votedFor;
+	}
+
+	public static void writeVotedForFile(int votedFor) {
+		try {
+			FileOutputStream fos = new FileOutputStream(votedForFilename);
+			ObjectOutputStream oos = new ObjectOutputStream(fos);
+			oos.writeInt(votedFor);
+			oos.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public static List<LogEntry> readLogFile() {
+		List<LogEntry> log = null;
+		try {
+			FileInputStream fis = new FileInputStream(logFilename);
+			ObjectInputStream ois = new ObjectInputStream(fis);
+			log = (List<LogEntry>) ois.readObject();
+			ois.close();
+		} catch (IOException | ClassNotFoundException e) {
+			e.printStackTrace();
+		}
+		return log;
+	}
+
+	public static void writeLogFile(List<LogEntry> log) {
+		try {
+			FileOutputStream fos = new FileOutputStream(logFilename);
+			ObjectOutputStream oos = new ObjectOutputStream(fos);
+			oos.writeObject(log);
+			oos.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
 	public static void printState() {
 		if (appServer.state == ServerState.FOLLOWER) {
 			System.out.println("state: FOLLOWER.");
@@ -70,7 +145,8 @@ public class AppServer {
 	}
 
 	public static void printLog() {
-		for (LogEntry e : appServer.log) {
+		List<LogEntry> log = readLogFile();
+		for (LogEntry e : log) {
 			System.out.println(e.getCommand());
 		}
 		System.out.println("\n");
@@ -86,20 +162,18 @@ public class AppServer {
 
 	private AppServer() {
 		state = ServerState.FOLLOWER;
-		currentTerm = 1;
-		votedFor = -1;
+		writeCurrentTermFile(1);
+		writeVotedForFile(-1);
 		commitIndex = -1;
 		lastApplied = -1;
 		id = -1;
 		currentLeader = -1;
 
-		log = new ArrayList<>();
+		writeLogFile(new ArrayList<>());
 		nodes = new ArrayList<>();
 		posts = new ArrayList<>();
 		posts.add("init1");
 		posts.add("init2");
-		posts.add("init3");
-		posts.add("init4");
 	}
 
 	public static AppServer getAppServer() {
@@ -107,23 +181,27 @@ public class AppServer {
 	}
 
 	public static LogEntry getEntryFromIndex(int i) {
-		if (i >= appServer.log.size())
+		List<LogEntry> log = readLogFile();
+		if (i >= log.size())
 			return null;
-		return appServer.log.get(i);
+		return log.get(i);
 	}
 
 	public static List<LogEntry> getEntriesFromIndex(int i) {
 		List<LogEntry> entries = new ArrayList<>();
-		if (i >= appServer.log.size())
+		List<LogEntry> log = readLogFile();
+		if (i >= log.size())
 			return entries;
-		return appServer.log.subList(i, appServer.log.size());
+		return log.subList(i, log.size());
 	}
 
 	public static void deleteEntriesFromIndex(int i) {
-		int lastIndex = appServer.log.size() - 1;
+		List<LogEntry> log = readLogFile();
+		int lastIndex = log.size() - 1;
 		for (; lastIndex >= i; --lastIndex) {
-			appServer.log.remove(lastIndex);
+			log.remove(lastIndex);
 		}
+		writeLogFile(log);
 	}
 
 	public static void handleClientsReq(String req, InetAddress inetAddress) {
@@ -150,8 +228,10 @@ public class AppServer {
 		if (DEBUG)
 			System.out.println("recvEntry, command = " + command);
 
-		LogEntry entry = new LogEntry(appServer.currentTerm, command);
-		appServer.log.add(entry);
+		LogEntry entry = new LogEntry(readCurrentTermFile(), command);
+		List<LogEntry> log = readLogFile();
+		log.add(entry);
+		writeLogFile(log);
 
 		for (Node node : appServer.nodes) {
 			if (node.getId() == appServer.id)
@@ -225,7 +305,7 @@ public class AppServer {
 			prevLogTerm = getEntryFromIndex(prevLogIndex).getTerm();
 		}
 		List<LogEntry> entries = getEntriesFromIndex(nextIndex);
-		AppendEntriesRPC ae = new AppendEntriesRPC(appServer.currentTerm, appServer.id, prevLogIndex, prevLogTerm,
+		AppendEntriesRPC ae = new AppendEntriesRPC(readCurrentTermFile(), appServer.id, prevLogIndex, prevLogTerm,
 				entries, appServer.commitIndex);
 		return ae;
 	}
@@ -279,17 +359,20 @@ public class AppServer {
 		if (DEBUG)
 			System.out.println("becomeFollower");
 
-		appServer.votedFor = -1;
+		writeVotedForFile(-1);
 		appServer.state = ServerState.FOLLOWER;
 	}
 
 	public static void becomeCandidate() {
+		int currentTerm = readCurrentTermFile();
+
 		if (DEBUG) {
 			System.out.println("becomeCandidate");
-			System.out.println("currentTerm = " + appServer.currentTerm);
+			System.out.println("currentTerm = " + currentTerm);
 		}
 
-		appServer.currentTerm += 1;
+		currentTerm += 1;
+		writeCurrentTermFile(currentTerm);
 
 		for (Node node : appServer.nodes) {
 			if (node.getId() == appServer.id)
@@ -299,7 +382,7 @@ public class AppServer {
 		}
 
 		/* vote for self */
-		appServer.votedFor = appServer.id;
+		writeVotedForFile(appServer.id);
 		appServer.currentLeader = -1;
 		appServer.state = ServerState.CANDIDATE;
 
@@ -307,15 +390,16 @@ public class AppServer {
 		appServer.timeoutElapsed = (electionTimeout - 2 * (rn.nextInt(5 * electionTimeout) % electionTimeout)) / 2;
 
 		/* request vote */
+		List<LogEntry> log = readLogFile();
 		for (Node node : appServer.nodes) {
 			if (node.getId() == appServer.id)
 				continue;
-			int term = appServer.currentTerm;
+			int term = currentTerm;
 			int candidateId = appServer.id;
-			int lastLogIndex = appServer.log.size() - 1;
+			int lastLogIndex = log.size() - 1;
 			int lastLogTerm = -1;
 			if (lastLogIndex >= 0)
-				lastLogTerm = appServer.log.get(lastLogIndex).getTerm();
+				lastLogTerm = log.get(lastLogIndex).getTerm();
 			RequestVoteRPC rpc = new RequestVoteRPC(term, candidateId, lastLogIndex, lastLogTerm);
 			sendMessage(node, rpc);
 		}
@@ -327,7 +411,7 @@ public class AppServer {
 
 		appServer.state = ServerState.LEADER;
 
-		int lastLogIndex = appServer.log.size() - 1;
+		int lastLogIndex = readLogFile().size() - 1;
 		for (Node node : appServer.nodes) {
 			if (node.getId() == appServer.id)
 				continue;
@@ -386,9 +470,10 @@ public class AppServer {
 		}
 
 		/* commit idx < lastApplied */
+		List<LogEntry> log = readLogFile();
 		while (appServer.commitIndex > appServer.lastApplied) {
 			++appServer.lastApplied;
-			String cmd = appServer.log.get(appServer.lastApplied).getCommand();
+			String cmd = log.get(appServer.lastApplied).getCommand();
 			appServer.posts.add(cmd);
 		}
 	}
@@ -451,7 +536,6 @@ public class AppServer {
 		}
 
 		appServer.currentLeader = -1;
-		appServer.currentTerm = 1;
 
 		Thread listenToClientsThread = new Thread(new ListenToClientsThread());
 		listenToClientsThread.start();
@@ -591,13 +675,16 @@ public class AppServer {
 						+ ", leaderCommit = " + ae.getLeaderCommit());
 			}
 
+			int currentTerm = readCurrentTermFile();
+
 			boolean success = true;
-			if (appServer.state == ServerState.CANDIDATE && ae.getTerm() == appServer.currentTerm) {
+			if (appServer.state == ServerState.CANDIDATE && ae.getTerm() == currentTerm) {
 				becomeFollower();
-			} else if (ae.getTerm() > appServer.currentTerm) {
-				appServer.currentTerm = ae.getTerm();
+			} else if (ae.getTerm() > currentTerm) {
+				currentTerm = ae.getTerm();
+				writeCurrentTermFile(currentTerm);
 				becomeFollower();
-			} else if (ae.getTerm() < appServer.currentTerm) {
+			} else if (ae.getTerm() < currentTerm) {
 				/* 1. Reply false if term < currentTerm (5.1) */
 				success = false;
 			}
@@ -615,7 +702,7 @@ public class AppServer {
 				}
 			}
 			if (!success) {
-				response = new AppendEntriesRPCResponse(appServer.currentTerm, success, appServer.id, -1);
+				response = new AppendEntriesRPCResponse(currentTerm, success, appServer.id, -1);
 				return response;
 			}
 
@@ -641,20 +728,21 @@ public class AppServer {
 
 			/* 4. Append any new entries not already in the log */
 			// TODO: Check
+			List<LogEntry> log = readLogFile();
 			for (LogEntry e : ae.getEntries()) {
-				appServer.log.add(e);
+				log.add(e);
 			}
+			writeLogFile(log);
 
 			/*
 			 * 5. If leaderCommit > commitIndex, set commitIndex =
 			 * min(leaderCommit, index of last new entry)
 			 */
 			if (ae.getLeaderCommit() > appServer.commitIndex) {
-				appServer.commitIndex = Math.min(ae.getLeaderCommit(), appServer.log.size() - 1);
+				appServer.commitIndex = Math.min(ae.getLeaderCommit(), log.size() - 1);
 			}
 
-			response = new AppendEntriesRPCResponse(appServer.currentTerm, success, appServer.id,
-					appServer.log.size() - 1);
+			response = new AppendEntriesRPCResponse(currentTerm, success, appServer.id, log.size() - 1);
 			return response;
 		}
 
@@ -670,8 +758,10 @@ public class AppServer {
 				return;
 			}
 
-			if (aer.getTerm() > appServer.currentTerm) {
-				appServer.currentTerm = aer.getTerm();
+			int currentTerm = readCurrentTermFile();
+
+			if (aer.getTerm() > currentTerm) {
+				writeCurrentTermFile(aer.getTerm());
 				becomeFollower();
 				return;
 			}
@@ -699,9 +789,9 @@ public class AppServer {
 			 * matchIndex[i] >= N, and log[N].term == currentTerm: set
 			 * commitIndex = N (5.3, 5.4).
 			 */
-			int lastLogIndex = appServer.log.size() - 1;
-			for (int N = lastLogIndex; N > appServer.commitIndex
-					&& appServer.log.get(N).getTerm() == appServer.currentTerm; --N) {
+			List<LogEntry> log = readLogFile();
+			int lastLogIndex = log.size() - 1;
+			for (int N = lastLogIndex; N > appServer.commitIndex && log.get(N).getTerm() == currentTerm; --N) {
 				int cnt = 1;
 				for (Node n : appServer.nodes) {
 					if (n.getId() == appServer.id)
@@ -726,15 +816,18 @@ public class AppServer {
 		private static void recvRequestVote(Message message) {
 			RequestVoteRPC rv = (RequestVoteRPC) message;
 
-			if (rv.getTerm() > appServer.currentTerm) {
-				appServer.currentTerm = rv.getTerm();
+			int currentTerm = readCurrentTermFile();
+
+			if (rv.getTerm() > currentTerm) {
+				currentTerm = rv.getTerm();
+				writeCurrentTermFile(currentTerm);
 				becomeFollower();
 			}
 
 			boolean voteGranted = false;
 
 			/* 1. Reply false if term < currentTerm (5.1) */
-			if (rv.getTerm() < appServer.currentTerm) {
+			if (rv.getTerm() < currentTerm) {
 				voteGranted = false;
 			}
 
@@ -744,7 +837,7 @@ public class AppServer {
 			 */
 			boolean isUpToDate = true;
 
-			int currentIndex = appServer.log.size() - 1;
+			int currentIndex = readLogFile().size() - 1;
 
 			if (currentIndex != -1) {
 				LogEntry e = getEntryFromIndex(currentIndex);
@@ -755,25 +848,28 @@ public class AppServer {
 				}
 			}
 
-			if ((appServer.votedFor == -1 || appServer.votedFor == rv.getCandidateId()) && isUpToDate) {
+			int votedFor = readVotedForFile();
+			if ((votedFor == -1 || votedFor == rv.getCandidateId()) && isUpToDate) {
 				voteGranted = true;
-				appServer.votedFor = rv.getCandidateId();
+				writeVotedForFile(rv.getCandidateId());
 			}
 
-			Message response = new RequestVoteRPCResponse(appServer.currentTerm, voteGranted, appServer.id);
+			Message response = new RequestVoteRPCResponse(currentTerm, voteGranted, appServer.id);
 			sendMessage(appServer.nodes.get(rv.getCandidateId()), response);
 		}
 
 		private static void recvRequestVoteResponse(Message message) {
 			RequestVoteRPCResponse rvr = (RequestVoteRPCResponse) message;
 
+			int currentTerm = readCurrentTermFile();
+
 			if (appServer.state != ServerState.CANDIDATE) {
 				return;
-			} else if (appServer.currentTerm < rvr.getTerm()) {
-				appServer.currentTerm = rvr.getTerm();
+			} else if (currentTerm < rvr.getTerm()) {
+				writeCurrentTermFile(rvr.getTerm());
 				becomeFollower();
 				return;
-			} else if (appServer.currentTerm != rvr.getTerm()) {
+			} else if (currentTerm != rvr.getTerm()) {
 				return;
 			}
 
