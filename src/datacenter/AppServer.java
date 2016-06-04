@@ -202,8 +202,8 @@ public class AppServer {
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		}
-		appServer.IPAddress = inetAddress.getHostAddress();
-		genFilenames(appServer.IPAddress);
+		IPAddress = inetAddress.getHostAddress();
+		genFilenames(IPAddress);
 
 		state = ServerState.FOLLOWER;
 
@@ -393,7 +393,7 @@ public class AppServer {
 
 		if (appServer.state == ServerState.LEADER) {
 			for (Node node : appServer.nodes) {
-				if (node.getId() == appServer.id || !isInConfig(node))
+				if (node.getIPAddress().equals(appServer.IPAddress) || !isInConfig(node))
 					continue;
 
 				// if (node.getNextIndex() == appServer.log.size() - 1) {
@@ -499,7 +499,8 @@ public class AppServer {
 	public static void sendAppendEntriesToAll() {
 		int num = appServer.nodes.size();
 		for (int i = 0; i < num; ++i) {
-			if (appServer.id != appServer.nodes.get(i).getId() && isInConfig(appServer.nodes.get(i))) {
+			if (!appServer.IPAddress.equals(appServer.nodes.get(i).getIPAddress())
+					&& isInConfig(appServer.nodes.get(i))) {
 				// int term = appServer.currentTerm;
 				// int leaderId = appServer.id;
 				// int prevLogIndex = -1;
@@ -540,7 +541,7 @@ public class AppServer {
 		}
 
 		for (Node node : appServer.nodes) {
-			if (node.getId() == appServer.id && isInConfig(node))
+			if (node.getIPAddress().equals(appServer.IPAddress) && isInConfig(node))
 				node.setVotedForMe(true);
 			else
 				node.setVotedForMe(false);
@@ -557,7 +558,7 @@ public class AppServer {
 		/* request vote */
 		List<LogEntry> log = readLogFile();
 		for (Node node : appServer.nodes) {
-			if (node.getId() == appServer.id || !isInConfig(node))
+			if (node.getIPAddress().equals(appServer.IPAddress) || !isInConfig(node))
 				continue;
 			int term = currentTerm;
 			int candidateId = appServer.id;
@@ -582,7 +583,7 @@ public class AppServer {
 
 		int lastLogIndex = readLogFile().size() - 1;
 		for (Node node : appServer.nodes) {
-			if (node.getId() == appServer.id || !isInConfig(node))
+			if (node.getIPAddress().equals(appServer.IPAddress) || !isInConfig(node))
 				continue;
 			node.setNextIndex(lastLogIndex + 1);
 			node.setMatchIndex(-1);
