@@ -903,10 +903,10 @@ public class AppServer {
 			// TODO: Check
 			List<LogEntry> log = readLogFile();
 			int index = prevLogIndex;
-
+			int logSize = log.size();
 			for (LogEntry e : ae.entries) {
 				index++;
-				if (index < log.size())
+				if (index < logSize)
 					continue;
 				if (e.getType() == LogEntryType.POST) {
 					recvEntry("p", e.getContents());
