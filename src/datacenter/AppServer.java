@@ -351,9 +351,11 @@ public class AppServer {
 			oos.writeObject(message);
 			oos.flush();
 			socket.close();
-			if (DEBUG)
-				System.out.println("Message sent to node " + node.getId() + " (" + node.getIPAddress() + ":"
-						+ DC_LISTEN_TO_DC_PORT + ").");
+			if (DEBUG) {
+				// System.out.println("Message sent to node " + node.getId() + "
+				// (" + node.getIPAddress() + ":" + DC_LISTEN_TO_DC_PORT +
+				// ").");
+			}
 		} catch (ConnectException e) {
 			System.out.println(e.getMessage() + ", possibly no process is listening on " + node.getIPAddress() + ":"
 					+ DC_LISTEN_TO_DC_PORT);
@@ -887,7 +889,13 @@ public class AppServer {
 				writeVotedForFile(rv.getCandidateId());
 			}
 
-			Message response = new RequestVoteRPCResponse(currentTerm, voteGranted, appServer.id);
+			RequestVoteRPCResponse response = new RequestVoteRPCResponse(currentTerm, voteGranted, appServer.id);
+
+			if (DEBUG) {
+				System.out.println("My response to recvRequestVote: term = " + response.getTerm() + ", isVoteGranted = "
+						+ response.isVoteGranted() + ", nodeId = " + response.getNodeId());
+			}
+
 			sendMessage(appServer.nodes.get(rv.getCandidateId()), response);
 		}
 
