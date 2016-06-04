@@ -23,7 +23,7 @@ import java.util.Random;
 public class AppServer {
 	private static AppServer appServer = new AppServer();
 
-	private static final int period = 2000;
+	private static final int period = 10000;
 
 	private static final int DC_LISTEN_TO_CLIENTS_PORT = 8887;
 
@@ -46,8 +46,6 @@ public class AppServer {
 	ServerState state;
 
 	private boolean isVoting;
-
-	// private List<LogEntry> log;
 
 	private int commitIndex;
 
