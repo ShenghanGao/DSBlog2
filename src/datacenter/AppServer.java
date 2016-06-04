@@ -453,6 +453,7 @@ public class AppServer {
 		}
 
 		appServer.state = ServerState.LEADER;
+		appServer.currentLeader = appServer.id;
 
 		int lastLogIndex = readLogFile().size() - 1;
 		for (Node node : appServer.nodes) {
@@ -676,8 +677,7 @@ public class AppServer {
 					}
 					case APPEND_ENTRIES: {
 						Message response = recvAppendEntries(message);
-						if (appServer.currentLeader != -1)
-							sendMessage(appServer.nodes.get(appServer.currentLeader), response);
+						sendMessage(appServer.nodes.get(appServer.currentLeader), response);
 						break;
 					}
 					case APPEND_ENTRIES_RESPONSE: {
