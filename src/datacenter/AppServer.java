@@ -129,11 +129,6 @@ public class AppServer {
 			ObjectInputStream ois = new ObjectInputStream(fis);
 			log = (List<LogEntry>) ois.readObject();
 			ois.close();
-
-			for (LogEntry e : log) {
-				System.out.println(e.getCommand());
-			}
-			System.out.println("\n");
 		} catch (IOException | ClassNotFoundException e) {
 			e.printStackTrace();
 		}
@@ -681,7 +676,8 @@ public class AppServer {
 					}
 					case APPEND_ENTRIES: {
 						Message response = recvAppendEntries(message);
-						sendMessage(appServer.nodes.get(appServer.currentLeader), response);
+						if (appServer.currentLeader != -1)
+							sendMessage(appServer.nodes.get(appServer.currentLeader), response);
 						break;
 					}
 					case APPEND_ENTRIES_RESPONSE: {
