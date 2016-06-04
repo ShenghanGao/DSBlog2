@@ -162,6 +162,7 @@ public class AppServer {
 		System.out.println("currentTerm = " + currentTerm);
 		System.out.println("id = " + appServer.id);
 		System.out.println("currentLeader = " + appServer.currentLeader);
+		System.out.println("timeoutElapsed = " + appServer.timeoutElapsed);
 	}
 
 	public static void printLog() {
@@ -624,7 +625,8 @@ public class AppServer {
 		if (appServer.id == -1)
 			return;
 
-		appServer.timeoutElapsed += period;
+		if (appServer.state != ServerState.LEADER)
+			appServer.timeoutElapsed += period;
 
 		/* send heartbeat or start a new election */
 		if (appServer.state == ServerState.LEADER) {
