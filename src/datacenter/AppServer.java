@@ -678,11 +678,7 @@ public class AppServer {
 						break;
 					}
 					case APPEND_ENTRIES: {
-						Message response = recvAppendEntries(message);
-						if (appServer.currentLeader == -1) {
-						} else {
-							sendMessage(appServer.nodes.get(appServer.currentLeader), response);
-						}
+						recvAppendEntries(message);
 						break;
 					}
 					case APPEND_ENTRIES_RESPONSE: {
@@ -714,7 +710,7 @@ public class AppServer {
 			handleClientsReq(cr.getReq(), cr.getInetAddress());
 		}
 
-		private static Message recvAppendEntries(Message message) {
+		private static void recvAppendEntries(Message message) {
 			appServer.timeoutElapsed = 0;
 
 			AppendEntriesRPC ae = (AppendEntriesRPC) message;
@@ -755,7 +751,8 @@ public class AppServer {
 			}
 			if (!success) {
 				response = new AppendEntriesRPCResponse(currentTerm, success, appServer.id, -1);
-				return response;
+				sendMessage(appServer.nodes.get(ae.getLeaderId()), response);
+				return;
 			}
 
 			appServer.currentLeader = ae.getLeaderId();
@@ -795,7 +792,7 @@ public class AppServer {
 			}
 
 			response = new AppendEntriesRPCResponse(currentTerm, success, appServer.id, log.size() - 1);
-			return response;
+			sendMessage(appServer.nodes.get(ae.getLeaderId()), response);
 		}
 
 		private static void recvAppendEntriesResponse(Message message) {
