@@ -248,6 +248,10 @@ public class AppServer {
 			if (appServer.state != ServerState.LEADER) {
 				if (DEBUG)
 					System.out.println("I am not the leader and I need to redirect this req.");
+				if (appServer.currentLeader == -1) {
+					System.out.println("But currently I do not know who the leader is. Please send the request later.");
+					return;
+				}
 				ClientRequest cr = new ClientRequest(inetAddress, req);
 				sendMessage(appServer.nodes.get(appServer.currentLeader), cr);
 				return;
