@@ -61,6 +61,8 @@ public class AppServer {
 
 	private int cfgChangeLogIdx;
 
+	private String IPAddress;
+
 	public static void genFilenames(String IPAddress) {
 		StringBuilder currentTermFilenameBuilder = new StringBuilder(".currentTerm.txt");
 		currentTermFilenameBuilder.insert(0, IPAddress);
@@ -200,8 +202,8 @@ public class AppServer {
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		}
-		String myIPAddress = inetAddress.getHostAddress();
-		genFilenames(myIPAddress);
+		appServer.IPAddress = inetAddress.getHostAddress();
+		genFilenames(appServer.IPAddress);
 
 		state = ServerState.FOLLOWER;
 
@@ -359,6 +361,9 @@ public class AppServer {
 				if (!exist) {
 					node.setId(appServer.nodes.size());
 					appServer.nodes.add(node);
+					if (node.getIPAddress().equals(appServer.IPAddress)) {
+						appServer.id = node.getId();
+					}
 				}
 			}
 
@@ -680,27 +685,20 @@ public class AppServer {
 			e.printStackTrace();
 		}
 
-		InetAddress inetAddress = null;
-		try {
-			inetAddress = InetAddress.getLocalHost();
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-		}
-		String myIPAddress = inetAddress.getHostAddress();
-
 		for (Node node : appServer.nodes) {
-			if (myIPAddress.equals(node.getIPAddress())) {
+			if (appServer.IPAddress.equals(node.getIPAddress())) {
 				appServer.id = node.getId();
 				break;
 			}
 		}
 		if (appServer.id == -1) {
-			System.out.println("The IP address of this machine (" + myIPAddress + ") is not in the IP address file!");
+			System.out.println(
+					"The IP address of this machine (" + appServer.IPAddress + ") is not in the IP address file!");
 			System.out.println("I am not in the initial configuration!");
 			// return;
 		}
 
-		System.out.println("My IP address is " + myIPAddress + ", my id is " + appServer.id + ".");
+		System.out.println("My IP address is " + appServer.IPAddress + ", my id is " + appServer.id + ".");
 
 		becomeFollower();
 
