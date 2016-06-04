@@ -677,7 +677,8 @@ public class AppServer {
 					}
 					case APPEND_ENTRIES: {
 						Message response = recvAppendEntries(message);
-						sendMessage(appServer.nodes.get(appServer.currentLeader), response);
+						if (appServer.currentLeader != -1)
+							sendMessage(appServer.nodes.get(appServer.currentLeader), response);
 						break;
 					}
 					case APPEND_ENTRIES_RESPONSE: {
