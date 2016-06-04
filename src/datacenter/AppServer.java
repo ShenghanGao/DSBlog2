@@ -154,6 +154,8 @@ public class AppServer {
 		} else if (appServer.state == ServerState.LEADER) {
 			System.out.println("state: LEADER.");
 		}
+		int currentTerm = readCurrentTermFile();
+		System.out.println("currentTerm = " + currentTerm);
 	}
 
 	public static void printLog() {
@@ -431,8 +433,12 @@ public class AppServer {
 	}
 
 	public static void becomeLeader() {
-		if (DEBUG)
+		int currentTerm = readCurrentTermFile();
+
+		if (DEBUG) {
 			System.out.println("becomeLeader");
+			System.out.println("currentTerm = " + currentTerm);
+		}
 
 		appServer.state = ServerState.LEADER;
 
@@ -465,15 +471,6 @@ public class AppServer {
 		// AppendEntriesRPC rpc = new AppendEntriesRPC(term, leaderId,
 		// prevLogIndex, prevLogTerm, entries,
 		// leaderCommit);
-		// //////////////////////////////////////////////
-		// sendAppendEntriesRPC(this, target, rpc);
-		// flag = true;
-		// this.nextIndex.set(i, lastLogIndex + 1);
-		// this.matchIndex.set(i, lastLogIndex);
-		// } else {
-		// nextIndex.set(i, prevLogIndex);
-		// }
-		///////////////////////////////////////////////
 
 		/* note here we didn't apply the commitIndex to the state-machine */
 	}
