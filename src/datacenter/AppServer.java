@@ -197,6 +197,11 @@ public class AppServer {
 			writeLogFile(new ArrayList<>());
 		}
 
+		if (toRecover) {
+			System.out.println("Recovered log: ");
+			printLog();
+		}
+
 		nodes = new ArrayList<>();
 		posts = new ArrayList<>();
 		posts.add("init1");
