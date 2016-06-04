@@ -171,11 +171,11 @@ public class AppServer {
 		List<LogEntry> log = readLogFile();
 		for (LogEntry e : log) {
 			if (e.getType() == LogEntryType.POST) {
-				System.out.println("term = " + e.getTerm() + "contents = " + e.getContents());
+				System.out.println("term = " + e.getTerm() + ", contents = " + e.getContents());
 			} else if (e.getType() == LogEntryType.C_OLD_NEW) {
-				System.out.println("C_OLD_NEW: term = " + e.getTerm() + "contents = " + e.getContents());
+				System.out.println("C_OLD_NEW: term = " + e.getTerm() + ", contents = " + e.getContents());
 			} else if (e.getType() == LogEntryType.C_NEW) {
-				System.out.println("C_NEW: term = " + e.getTerm() + "contents = " + e.getContents());
+				System.out.println("C_NEW: term = " + e.getTerm() + ", contents = " + e.getContents());
 			}
 		}
 		System.out.println("\n");
@@ -278,7 +278,7 @@ public class AppServer {
 				sendMessage(appServer.nodes.get(appServer.currentLeader), cr);
 				return;
 			} else {
-				recvEntry(ss[0], ss[1]);
+				recvEntry(ss[0], readCurrentTermFile(), ss[1]);
 			}
 		} else if (ss[0].compareTo("l") == 0) {
 			sendLookup(inetAddress);
@@ -315,7 +315,7 @@ public class AppServer {
 			return false;
 	}
 
-	public static void recvEntry(String type, String contents) {
+	public static void recvEntry(String type, int term, String contents) {
 		// TODO: cfg_change
 
 		if (DEBUG) {
@@ -343,7 +343,7 @@ public class AppServer {
 
 		assert(entryType != null);
 
-		LogEntry entry = new LogEntry(readCurrentTermFile(), entryType, contents);
+		LogEntry entry = new LogEntry(term, entryType, contents);
 		List<LogEntry> log = readLogFile();
 		log.add(entry);
 		writeLogFile(log);
@@ -905,11 +905,11 @@ public class AppServer {
 				if (index < logSize)
 					continue;
 				if (e.getType() == LogEntryType.POST) {
-					recvEntry("p", e.getContents());
+					recvEntry("p", e.getTerm(), e.getContents());
 				} else if (e.getType() == LogEntryType.C_OLD_NEW) {
-					recvEntry("c", e.getContents());
+					recvEntry("c", e.getTerm(), e.getContents());
 				} else if (e.getType() == LogEntryType.C_NEW) {
-					recvEntry("cn", e.getContents());
+					recvEntry("cn", e.getTerm(), e.getContents());
 				}
 			}
 			log = readLogFile();
@@ -1016,7 +1016,7 @@ public class AppServer {
 			if (appServer.cfgChangeLogIdx != -1
 					&& log.get(appServer.cfgChangeLogIdx).getType() == LogEntryType.C_OLD_NEW
 					&& appServer.commitIndex >= appServer.cfgChangeLogIdx) {
-				recvEntry("cn", log.get(appServer.cfgChangeLogIdx).getContents());
+				recvEntry("cn", readCurrentTermFile(), log.get(appServer.cfgChangeLogIdx).getContents());
 			} else if (appServer.cfgChangeLogIdx != -1
 					&& log.get(appServer.cfgChangeLogIdx).getType() == LogEntryType.C_NEW
 					&& appServer.commitIndex >= appServer.cfgChangeLogIdx
