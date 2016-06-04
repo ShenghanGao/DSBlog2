@@ -163,6 +163,8 @@ public class AppServer {
 		System.out.println("id = " + appServer.id);
 		System.out.println("currentLeader = " + appServer.currentLeader);
 		System.out.println("timeoutElapsed = " + appServer.timeoutElapsed);
+		System.out.println("commitIndex = " + appServer.commitIndex);
+		System.out.println("cfgChangeLogIdx = " + appServer.cfgChangeLogIdx);
 	}
 
 	public static void printLog() {
@@ -573,6 +575,8 @@ public class AppServer {
 	}
 
 	public static void becomeLeader() {
+		appServer.timeoutElapsed = 0;
+
 		int currentTerm = readCurrentTermFile();
 
 		if (DEBUG) {
