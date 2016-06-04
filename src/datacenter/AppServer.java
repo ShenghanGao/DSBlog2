@@ -129,6 +129,11 @@ public class AppServer {
 			ObjectInputStream ois = new ObjectInputStream(fis);
 			log = (List<LogEntry>) ois.readObject();
 			ois.close();
+
+			for (LogEntry e : log) {
+				System.out.println(e.getCommand());
+			}
+			System.out.println("\n");
 		} catch (IOException | ClassNotFoundException e) {
 			e.printStackTrace();
 		}
