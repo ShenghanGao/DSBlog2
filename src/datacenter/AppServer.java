@@ -360,9 +360,8 @@ public class AppServer {
 			oos.flush();
 			socket.close();
 			if (DEBUG) {
-				// System.out.println("Message sent to node " + node.getId() + "
-				// (" + node.getIPAddress() + ":" + DC_LISTEN_TO_DC_PORT +
-				// ").");
+				System.out.println("Message sent to node " + node.getId() + "(" + node.getIPAddress() + ":"
+						+ DC_LISTEN_TO_DC_PORT + ").");
 			}
 		} catch (ConnectException e) {
 			System.out.println(e.getMessage() + ", possibly no process is listening on " + node.getIPAddress() + ":"
@@ -408,13 +407,12 @@ public class AppServer {
 	public static void becomeCandidate() {
 		int currentTerm = readCurrentTermFile();
 
-		if (DEBUG) {
-			System.out.println("becomeCandidate");
-			System.out.println("currentTerm = " + currentTerm);
-		}
-
 		currentTerm += 1;
 		writeCurrentTermFile(currentTerm);
+
+		if (DEBUG) {
+			System.out.println("becomeCandidate, currentTerm = " + currentTerm);
+		}
 
 		for (Node node : appServer.nodes) {
 			if (node.getId() == appServer.id)
@@ -451,8 +449,7 @@ public class AppServer {
 		int currentTerm = readCurrentTermFile();
 
 		if (DEBUG) {
-			System.out.println("becomeLeader");
-			System.out.println("currentTerm = " + currentTerm);
+			System.out.println("becomeLeader, currentTerm = " + currentTerm);
 		}
 
 		appServer.state = ServerState.LEADER;
@@ -530,11 +527,16 @@ public class AppServer {
 		}
 
 		System.out.println("args.length = " + args.length);
+
+		assert(appServer == null);
+
 		if (args.length == 0) {
 			appServer = new AppServer(false);
 		} else {
 			appServer = new AppServer(true);
 		}
+
+		assert(appServer != null);
 
 		String line;
 		int lineNo = 0;
