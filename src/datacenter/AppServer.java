@@ -197,6 +197,7 @@ public class AppServer {
 		lastApplied = -1;
 		id = -1;
 		currentLeader = -1;
+		cfgChangeLogIdx = -1;
 
 		if (!toRecover) {
 			writeCurrentTermFile(1);
