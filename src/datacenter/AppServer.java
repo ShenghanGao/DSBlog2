@@ -175,6 +175,9 @@ public class AppServer {
 	}
 
 	private AppServer(boolean toRecover) {
+		if (DEBUG)
+			System.out.println("AppServer constructor is called! toRecover = " + toRecover);
+
 		InetAddress inetAddress = null;
 		try {
 			inetAddress = InetAddress.getLocalHost();
