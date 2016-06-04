@@ -59,6 +59,8 @@ public class AppServer {
 
 	private int currentLeader;
 
+	private int cfgChangeLogIdx;
+
 	public static void genFilenames(String IPAddress) {
 		StringBuilder currentTermFilenameBuilder = new StringBuilder(".currentTerm.txt");
 		currentTermFilenameBuilder.insert(0, IPAddress);
@@ -163,7 +165,7 @@ public class AppServer {
 	public static void printLog() {
 		List<LogEntry> log = readLogFile();
 		for (LogEntry e : log) {
-			System.out.println(e.getCommand());
+			System.out.println(e.getContents());
 		}
 		System.out.println("\n");
 	}
@@ -171,7 +173,7 @@ public class AppServer {
 	public static void printEntries(List<LogEntry> entries) {
 		System.out.println("Entries: ");
 		for (LogEntry e : entries) {
-			System.out.println(e.getCommand());
+			System.out.println(e.getContents());
 		}
 		System.out.println("End of entries\n");
 	}
@@ -239,12 +241,16 @@ public class AppServer {
 			log.remove(lastIndex);
 		}
 		writeLogFile(log);
+
+		if (appServer.cfgChangeLogIdx >= i) {
+			appServer.cfgChangeLogIdx = -1;
+		}
 	}
 
 	public static void handleClientsReq(String req, InetAddress inetAddress) {
 		String[] ss = req.split(" ", 2);
 
-		if (ss[0].compareTo("p") == 0) {
+		if (ss[0].compareTo("p") == 0 || ss[0].compareTo("c") == 0) {
 			if (appServer.state != ServerState.LEADER) {
 				if (DEBUG)
 					System.out.println("I am not the leader and I need to redirect this req.");
@@ -256,26 +262,108 @@ public class AppServer {
 				sendMessage(appServer.nodes.get(appServer.currentLeader), cr);
 				return;
 			} else {
-				recvEntry(ss[1]);
+				recvEntry(ss[0], ss[1]);
 			}
 		} else if (ss[0].compareTo("l") == 0) {
 			sendLookup(inetAddress);
 		}
 	}
 
-	public static void recvEntry(String command) {
+	private static List<Node> parseIPAddressContents(String contents) {
+		List<Node> li = new ArrayList<>();
+		String[] ss = contents.split("\\s+");
+
+		for (int i = 1; i < ss.length; ++i) {
+			Node node = new Node(ss[i], -1);
+			li.add(node);
+		}
+
+		return li;
+	}
+
+	private static boolean isInConfig(Node node) {
+		if (node.getFlag() > 0)
+			return true;
+		else
+			return false;
+	}
+
+	public static void recvEntry(String type, String contents) {
 		// TODO: cfg_change
 
-		if (DEBUG)
-			System.out.println("recvEntry, command = " + command);
+		if (DEBUG) {
+			System.out.println("recvEntry, type = " + type + ", contents = " + contents);
+		}
 
-		LogEntry entry = new LogEntry(readCurrentTermFile(), command);
+		LogEntryType entryType;
+		switch (type) {
+		case "p": {
+			entryType = LogEntryType.POST;
+			break;
+		}
+		case "c": {
+			entryType = LogEntryType.C_OLD_NEW;
+			break;
+		}
+		case "cn": {
+			entryType = LogEntryType.C_NEW;
+			break;
+		}
+		default: {
+			entryType = null;
+		}
+		}
+
+		assert(entryType != null);
+
+		LogEntry entry = new LogEntry(readCurrentTermFile(), entryType, contents);
 		List<LogEntry> log = readLogFile();
 		log.add(entry);
 		writeLogFile(log);
 
+		if (entryType == LogEntryType.C_OLD_NEW) {
+			List<Node> newServers = parseIPAddressContents(contents);
+
+			for (Node node : newServers) {
+				boolean exist = false;
+				for (Node oldNode : appServer.nodes) {
+					if (node.getIPAddress().equals(oldNode.getIPAddress())) {
+						exist = true;
+						break;
+					}
+				}
+				if (!exist) {
+					node.setId(appServer.nodes.size());
+					appServer.nodes.add(node);
+				}
+			}
+
+			for (Node node : newServers) {
+				for (Node n : appServer.nodes) {
+					if (node.getIPAddress().equals(n.getIPAddress())) {
+						n.setFlag(n.getFlag() | (1 << 1));
+					}
+				}
+			}
+
+			appServer.cfgChangeLogIdx = log.size() - 1;
+		} else if (entryType == LogEntryType.C_NEW) {
+			List<Node> newServers = parseIPAddressContents(contents);
+			for (Node n : appServer.nodes) {
+				n.setFlag(0);
+				for (Node node : newServers) {
+					if (node.getIPAddress().equals(n.getIPAddress())) {
+						n.setFlag(1);
+						break;
+					}
+				}
+			}
+
+			appServer.cfgChangeLogIdx = log.size() - 1;
+		}
+
 		for (Node node : appServer.nodes) {
-			if (node.getId() == appServer.id)
+			if (node.getId() == appServer.id || !isInConfig(node))
 				continue;
 
 			// if (node.getNextIndex() == appServer.log.size() - 1) {
@@ -380,7 +468,7 @@ public class AppServer {
 	public static void sendAppendEntriesToAll() {
 		int num = appServer.nodes.size();
 		for (int i = 0; i < num; ++i) {
-			if (appServer.id != appServer.nodes.get(i).getId()) {
+			if (appServer.id != appServer.nodes.get(i).getId() && isInConfig(appServer.nodes.get(i))) {
 				// int term = appServer.currentTerm;
 				// int leaderId = appServer.id;
 				// int prevLogIndex = -1;
@@ -421,7 +509,7 @@ public class AppServer {
 		}
 
 		for (Node node : appServer.nodes) {
-			if (node.getId() == appServer.id)
+			if (node.getId() == appServer.id && isInConfig(node))
 				node.setVotedForMe(true);
 			else
 				node.setVotedForMe(false);
@@ -438,7 +526,7 @@ public class AppServer {
 		/* request vote */
 		List<LogEntry> log = readLogFile();
 		for (Node node : appServer.nodes) {
-			if (node.getId() == appServer.id)
+			if (node.getId() == appServer.id || !isInConfig(node))
 				continue;
 			int term = currentTerm;
 			int candidateId = appServer.id;
@@ -463,7 +551,7 @@ public class AppServer {
 
 		int lastLogIndex = readLogFile().size() - 1;
 		for (Node node : appServer.nodes) {
-			if (node.getId() == appServer.id)
+			if (node.getId() == appServer.id || !isInConfig(node))
 				continue;
 			node.setNextIndex(lastLogIndex + 1);
 			node.setMatchIndex(-1);
@@ -514,7 +602,7 @@ public class AppServer {
 		List<LogEntry> log = readLogFile();
 		while (appServer.commitIndex > appServer.lastApplied) {
 			++appServer.lastApplied;
-			String cmd = log.get(appServer.lastApplied).getCommand();
+			String cmd = log.get(appServer.lastApplied).getContents();
 			appServer.posts.add(cmd);
 		}
 	}
@@ -553,6 +641,7 @@ public class AppServer {
 				if (line.isEmpty())
 					continue;
 				Node node = new Node(line, lineNo++);
+				node.setFlag(1);
 				appServer.nodes.add(node);
 			}
 			br.close();
@@ -603,7 +692,6 @@ public class AppServer {
 				Thread.sleep(period);
 				printState();
 				printLog();
-				// Thread.sleep(period);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
@@ -795,6 +883,12 @@ public class AppServer {
 				appServer.commitIndex = Math.min(ae.getLeaderCommit(), log.size() - 1);
 			}
 
+			if (appServer.cfgChangeLogIdx != -1
+					&& log.get(appServer.cfgChangeLogIdx).getType() == LogEntryType.C_OLD_NEW
+					&& appServer.commitIndex >= appServer.cfgChangeLogIdx) {
+				recvEntry("cn", log.get(appServer.cfgChangeLogIdx).getContents());
+			}
+
 			response = new AppendEntriesRPCResponse(currentTerm, success, appServer.id, log.size() - 1);
 			sendMessage(appServer.nodes.get(ae.getLeaderId()), response);
 		}
@@ -844,21 +938,55 @@ public class AppServer {
 			 */
 			List<LogEntry> log = readLogFile();
 			int lastLogIndex = log.size() - 1;
+
+			int numOfOld = 0;
+			int numOfNew = 0;
+			for (Node n : appServer.nodes) {
+				if ((n.getFlag() & 1) > 0)
+					++numOfOld;
+				if ((n.getFlag() & (1 << 1)) > 0)
+					++numOfNew;
+			}
+
 			for (int N = lastLogIndex; N > appServer.commitIndex && log.get(N).getTerm() == currentTerm; --N) {
-				int cnt = 1;
+				int cntOld = 0;
+				int cntNew = 0;
+
 				for (Node n : appServer.nodes) {
-					if (n.getId() == appServer.id)
+					if (!isInConfig(n))
 						continue;
 
-					// TODO: Check
-					if (n.getMatchIndex() >= N)
-						++cnt;
-
-					// TODO: There may be a problem with the number of nodes
-					if (cnt >= appServer.nodes.size() / 2 + 1) {
-						appServer.commitIndex = N;
+					if (n.getId() == appServer.id) {
+						if ((n.getFlag() & 1) > 0)
+							++cntOld;
+						if ((n.getFlag() & (1 << 1)) > 0)
+							++cntNew;
+					} else {
+						if (n.getMatchIndex() >= N) {
+							if ((n.getFlag() & 1) > 0)
+								++cntOld;
+							if ((n.getFlag() & (1 << 1)) > 0)
+								++cntNew;
+						}
 					}
 				}
+
+				if (cntOld >= numOfOld / 2 + 1) {
+					if (numOfNew == 0 || cntNew >= numOfNew / 2 + 1) {
+						appServer.commitIndex = N;
+						break;
+					}
+				}
+			}
+
+			if (appServer.cfgChangeLogIdx != -1
+					&& log.get(appServer.cfgChangeLogIdx).getType() == LogEntryType.C_OLD_NEW
+					&& appServer.commitIndex >= appServer.cfgChangeLogIdx) {
+				recvEntry("cn", log.get(appServer.cfgChangeLogIdx).getContents());
+			} else if (appServer.cfgChangeLogIdx != -1
+					&& log.get(appServer.cfgChangeLogIdx).getType() == LogEntryType.C_NEW
+					&& appServer.commitIndex >= appServer.cfgChangeLogIdx) {
+				becomeFollower();
 			}
 
 			// Send remaining entries, is this needed?
@@ -876,13 +1004,18 @@ public class AppServer {
 
 			int currentTerm = readCurrentTermFile();
 
+			boolean voteGranted = false;
+			if (appServer.timeoutElapsed < electionTimeout / 3) {
+				Message response = new RequestVoteRPCResponse(currentTerm, voteGranted, appServer.id);
+				sendMessage(appServer.nodes.get(rv.getCandidateId()), response);
+				return;
+			}
+
 			if (rv.getTerm() > currentTerm) {
 				currentTerm = rv.getTerm();
 				writeCurrentTermFile(currentTerm);
 				becomeFollower();
 			}
-
-			boolean voteGranted = false;
 
 			/* 1. Reply false if term < currentTerm (5.1) */
 			if (rv.getTerm() < currentTerm) {
@@ -952,13 +1085,34 @@ public class AppServer {
 		}
 
 		private static boolean isMajority() {
-			int majority = appServer.nodes.size() / 2 + 1;
-			int cnt = 0;
-			for (Node node : appServer.nodes) {
-				if (node.isVotedForMe())
-					++cnt;
+			int numOfOld = 0;
+			int numOfNew = 0;
+			for (Node n : appServer.nodes) {
+				if ((n.getFlag() & 1) > 0)
+					++numOfOld;
+				if ((n.getFlag() & (1 << 1)) > 0)
+					++numOfNew;
 			}
-			return cnt >= majority;
+
+			int cntOld = 0;
+			int cntNew = 0;
+			for (Node node : appServer.nodes) {
+				if (isInConfig(node)) {
+					if (node.isVotedForMe()) {
+						if ((node.getFlag() & 1) > 0)
+							++cntOld;
+						if ((node.getFlag() & (1 << 1)) > 0)
+							++cntNew;
+					}
+				}
+			}
+
+			if (cntOld >= numOfOld / 2 + 1) {
+				if (numOfNew == 0 || cntNew >= numOfNew / 2 + 1) {
+					return true;
+				}
+			}
+			return false;
 		}
 	}
 }

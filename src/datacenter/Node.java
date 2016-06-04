@@ -15,7 +15,7 @@ public class Node {
 
 	public Node(String IPAddress, int id) {
 		this.IPAddress = IPAddress;
-		this.flag = 1;
+		this.flag = 0;
 		this.id = id;
 	}
 

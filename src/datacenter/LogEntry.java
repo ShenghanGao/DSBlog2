@@ -4,19 +4,24 @@ import java.io.Serializable;
 
 public class LogEntry implements Serializable {
 	private int term;
+	private LogEntryType type;
+	private String contents;
 
-	private String command;
-
-	public LogEntry(int term, String command) {
+	public LogEntry(int term, LogEntryType type, String contents) {
 		this.term = term;
-		this.command = command;
+		this.type = type;
+		this.contents = contents;
+	}
+
+	public LogEntryType getType() {
+		return type;
+	}
+
+	public String getContents() {
+		return contents;
 	}
 
 	public int getTerm() {
 		return term;
-	}
-
-	public String getCommand() {
-		return command;
 	}
 }
