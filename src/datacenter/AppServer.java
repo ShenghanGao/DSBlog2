@@ -165,7 +165,13 @@ public class AppServer {
 	public static void printLog() {
 		List<LogEntry> log = readLogFile();
 		for (LogEntry e : log) {
-			System.out.println(e.getContents());
+			if (e.getType() == LogEntryType.POST) {
+				System.out.println(e.getContents());
+			} else if (e.getType() == LogEntryType.C_OLD_NEW) {
+				System.out.println("C_OLD_NEW: " + e.getContents());
+			} else if (e.getType() == LogEntryType.C_NEW) {
+				System.out.println("C_NEW: " + e.getContents());
+			}
 		}
 		System.out.println("\n");
 	}
@@ -173,7 +179,13 @@ public class AppServer {
 	public static void printEntries(List<LogEntry> entries) {
 		System.out.println("Entries: ");
 		for (LogEntry e : entries) {
-			System.out.println(e.getContents());
+			if (e.getType() == LogEntryType.POST) {
+				System.out.println(e.getContents());
+			} else if (e.getType() == LogEntryType.C_OLD_NEW) {
+				System.out.println("C_OLD_NEW: " + e.getContents());
+			} else if (e.getType() == LogEntryType.C_NEW) {
+				System.out.println("C_NEW: " + e.getContents());
+			}
 		}
 		System.out.println("End of entries\n");
 	}
@@ -374,26 +386,28 @@ public class AppServer {
 			appServer.cfgChangeLogIdx = log.size() - 1;
 		}
 
-		for (Node node : appServer.nodes) {
-			if (node.getId() == appServer.id || !isInConfig(node))
-				continue;
+		if (appServer.state == ServerState.LEADER) {
+			for (Node node : appServer.nodes) {
+				if (node.getId() == appServer.id || !isInConfig(node))
+					continue;
 
-			// if (node.getNextIndex() == appServer.log.size() - 1) {
-			// AppendEntriesRPC ae = genAppendEntriesRPC(node);
-			// sendMessage(node, ae);
-			// }
+				// if (node.getNextIndex() == appServer.log.size() - 1) {
+				// AppendEntriesRPC ae = genAppendEntriesRPC(node);
+				// sendMessage(node, ae);
+				// }
 
-			AppendEntriesRPC ae = genAppendEntriesRPC(node);
+				AppendEntriesRPC ae = genAppendEntriesRPC(node);
 
-			if (DEBUG) {
-				System.out.println("recvEntry, AppendEntries: term = " + ae.getTerm() + ", leaderId = "
-						+ ae.getLeaderId() + ", prevLogIndex = " + ae.getPrevLogIndex() + ", prevLogTerm = "
-						+ ae.getPrevLogTerm() + ", leaderCommit = " + ae.getLeaderCommit());
-				printEntries(ae.entries);
-				System.out.println("recvEntry, send RPC to node " + node.getId() + ".");
+				if (DEBUG) {
+					System.out.println("recvEntry, AppendEntries: term = " + ae.getTerm() + ", leaderId = "
+							+ ae.getLeaderId() + ", prevLogIndex = " + ae.getPrevLogIndex() + ", prevLogTerm = "
+							+ ae.getPrevLogTerm() + ", leaderCommit = " + ae.getLeaderCommit());
+					printEntries(ae.entries);
+					System.out.println("recvEntry, send RPC to node " + node.getId() + ".");
+				}
+
+				// sendMessage(node, ae);
 			}
-
-			// sendMessage(node, ae);
 		}
 
 		// TODO: Response the client
@@ -888,10 +902,21 @@ public class AppServer {
 			/* 4. Append any new entries not already in the log */
 			// TODO: Check
 			List<LogEntry> log = readLogFile();
-			for (LogEntry e : ae.getEntries()) {
-				log.add(e);
+			int index = prevLogIndex;
+
+			for (LogEntry e : ae.entries) {
+				index++;
+				if (index < log.size())
+					continue;
+				if (e.getType() == LogEntryType.POST) {
+					recvEntry("p", e.getContents());
+				} else if (e.getType() == LogEntryType.C_OLD_NEW) {
+					recvEntry("c", e.getContents());
+				} else if (e.getType() == LogEntryType.C_NEW) {
+					recvEntry("cn", e.getContents());
+				}
 			}
-			writeLogFile(log);
+			log = readLogFile();
 
 			/*
 			 * 5. If leaderCommit > commitIndex, set commitIndex =
