@@ -601,6 +601,9 @@ public class AppServer {
 	}
 
 	public static void serverPeriodic() {
+		if (appServer.id == -1)
+			return;
+
 		appServer.timeoutElapsed += period;
 
 		/* send heartbeat or start a new election */
@@ -621,7 +624,8 @@ public class AppServer {
 
 	/*
 	 * thundarr.cs.ucsb.edu: 128.111.43.40, optimus.cs.ucsb.edu: 128.111.43.41,
-	 * megatron.cs.ucsb.edu: 128.111.43.42, tygra.cs.ucsb.edu: 128.111.43.43
+	 * megatron.cs.ucsb.edu: 128.111.43.42, tygra.cs.ucsb.edu: 128.111.43.43,
+	 * snarf.cs.ucsb.edu: 128.111.43.44, lupin.cs.ucsb.edu: 128.111.43.45
 	 */
 	public static void main(String[] args) {
 		String IPAddressesFile = "./IPAddresses2";
