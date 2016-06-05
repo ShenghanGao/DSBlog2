@@ -162,20 +162,20 @@ public class AppServer {
 		System.out.println("currentTerm = " + currentTerm);
 		System.out.println("id = " + appServer.id);
 		System.out.println("currentLeader = " + appServer.currentLeader);
-		System.out.println("timeoutElapsed = " + appServer.timeoutElapsed);
-		System.out.println("commitIndex = " + appServer.commitIndex);
-		System.out.println("cfgChangeLogIdx = " + appServer.cfgChangeLogIdx);
+		// System.out.println("timeoutElapsed = " + appServer.timeoutElapsed);
+		// System.out.println("commitIndex = " + appServer.commitIndex);
+		// System.out.println("cfgChangeLogIdx = " + appServer.cfgChangeLogIdx);
 	}
 
 	public static void printLog() {
 		List<LogEntry> log = readLogFile();
 		for (LogEntry e : log) {
 			if (e.getType() == LogEntryType.POST) {
-				System.out.println("term = " + e.getTerm() + ", contents = " + e.getContents());
+				System.out.println(e.getContents() + ", term = " + e.getTerm());
 			} else if (e.getType() == LogEntryType.C_OLD_NEW) {
-				System.out.println("C_OLD_NEW: term = " + e.getTerm() + ", contents = " + e.getContents());
+				System.out.println("C_OLD_NEW: " + e.getContents() + ", term = " + e.getTerm());
 			} else if (e.getType() == LogEntryType.C_NEW) {
-				System.out.println("C_NEW: term = " + e.getTerm() + ", contents = " + e.getContents());
+				System.out.println("C_NEW: " + e.getContents() + ", term = " + e.getTerm());
 			}
 		}
 		System.out.println("\n");
@@ -289,21 +289,21 @@ public class AppServer {
 		List<Node> li = new ArrayList<>();
 		String[] ss = contents.split("\\s+");
 
-		if (DEBUG) {
-			System.out.println("New IP addresses: ");
-		}
+		// if (DEBUG) {
+		// System.out.println("New IP addresses: ");
+		// }
 		for (int i = 1; i < ss.length; ++i) {
-			if (DEBUG) {
-				System.out.println(ss[i]);
-			}
+			// if (DEBUG) {
+			// System.out.println(ss[i]);
+			// }
 
 			Node node = new Node(ss[i], -1);
 			li.add(node);
 		}
 
-		if (DEBUG) {
-			System.out.println();
-		}
+		// if (DEBUG) {
+		// System.out.println();
+		// }
 
 		return li;
 	}
@@ -318,9 +318,10 @@ public class AppServer {
 	public static void recvEntry(String type, int term, String contents) {
 		// TODO: cfg_change
 
-		if (DEBUG) {
-			System.out.println("recvEntry, type = " + type + ", contents = " + contents);
-		}
+		// if (DEBUG) {
+		// System.out.println("recvEntry, type = " + type + ", contents = " +
+		// contents);
+		// }
 
 		LogEntryType entryType;
 		switch (type) {
@@ -404,13 +405,17 @@ public class AppServer {
 
 				AppendEntriesRPC ae = genAppendEntriesRPC(node);
 
-				if (DEBUG) {
-					System.out.println("recvEntry, AppendEntries: term = " + ae.getTerm() + ", leaderId = "
-							+ ae.getLeaderId() + ", prevLogIndex = " + ae.getPrevLogIndex() + ", prevLogTerm = "
-							+ ae.getPrevLogTerm() + ", leaderCommit = " + ae.getLeaderCommit());
-					printEntries(ae.entries);
-					System.out.println("recvEntry, send RPC to node " + node.getId() + ".");
-				}
+				// if (DEBUG) {
+				// System.out.println("recvEntry, AppendEntries: term = " +
+				// ae.getTerm() + ", leaderId = "
+				// + ae.getLeaderId() + ", prevLogIndex = " +
+				// ae.getPrevLogIndex() + ", prevLogTerm = "
+				// + ae.getPrevLogTerm() + ", leaderCommit = " +
+				// ae.getLeaderCommit());
+				// printEntries(ae.entries);
+				// System.out.println("recvEntry, send RPC to node " +
+				// node.getId() + ".");
+				// }
 
 				// sendMessage(node, ae);
 			}
@@ -436,16 +441,16 @@ public class AppServer {
 			oos.writeChar('l');
 			oos.flush();
 
-			if (DEBUG) {
-				System.out.println("sendLookup: l sent.");
-			}
+			// if (DEBUG) {
+			// System.out.println("sendLookup: l sent.");
+			// }
 
 			oos.writeObject(appServer.posts);
 			oos.flush();
 
-			if (DEBUG) {
-				System.out.println("sendLookup: posts sent.");
-			}
+			// if (DEBUG) {
+			// System.out.println("sendLookup: posts sent.");
+			// }
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -485,10 +490,11 @@ public class AppServer {
 			oos.writeObject(message);
 			oos.flush();
 			socket.close();
-			if (DEBUG) {
-				System.out.println("Message sent to node " + node.getId() + "(" + node.getIPAddress() + ":"
-						+ DC_LISTEN_TO_DC_PORT + ").");
-			}
+			// if (DEBUG) {
+			// System.out.println("Message sent to node " + node.getId() + "(" +
+			// node.getIPAddress() + ":"
+			// + DC_LISTEN_TO_DC_PORT + ").");
+			// }
 		} catch (ConnectException e) {
 			System.out.println(e.getMessage() + ", possibly no process is listening on " + node.getIPAddress() + ":"
 					+ DC_LISTEN_TO_DC_PORT);
@@ -741,8 +747,8 @@ public class AppServer {
 				try {
 					socket = listenToClientsSocket.accept();
 
-					if (DEBUG)
-						System.out.println("ListenToClientsThread accepted!");
+					// if (DEBUG)
+					// System.out.println("ListenToClientsThread accepted!");
 
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -755,9 +761,9 @@ public class AppServer {
 					BufferedReader br = new BufferedReader(isr);
 					req = br.readLine();
 
-					if (DEBUG) {
-						System.out.println("req = " + req);
-					}
+					// if (DEBUG) {
+					// System.out.println("req = " + req);
+					// }
 
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -837,11 +843,13 @@ public class AppServer {
 
 			Message response;
 
-			if (DEBUG) {
-				System.out.println("recvAppendEntries: term = " + ae.getTerm() + ", leaderId = " + ae.getLeaderId()
-						+ ", prevLogIndex = " + ae.getPrevLogIndex() + ", prevLogTerm = " + ae.getPrevLogTerm()
-						+ ", leaderCommit = " + ae.getLeaderCommit());
-			}
+			// if (DEBUG) {
+			// System.out.println("recvAppendEntries: term = " + ae.getTerm() +
+			// ", leaderId = " + ae.getLeaderId()
+			// + ", prevLogIndex = " + ae.getPrevLogIndex() + ", prevLogTerm = "
+			// + ae.getPrevLogTerm()
+			// + ", leaderCommit = " + ae.getLeaderCommit());
+			// }
 
 			int currentTerm = readCurrentTermFile();
 
@@ -929,10 +937,11 @@ public class AppServer {
 		private static void recvAppendEntriesResponse(Message message) {
 			AppendEntriesRPCResponse aer = (AppendEntriesRPCResponse) message;
 
-			if (DEBUG) {
-				System.out.println("recvAppendEntriesResponse: term = " + aer.getTerm() + ", success = "
-						+ aer.isSuccess() + ", nodeId = " + aer.getNodeId());
-			}
+			// if (DEBUG) {
+			// System.out.println("recvAppendEntriesResponse: term = " +
+			// aer.getTerm() + ", success = "
+			// + aer.isSuccess() + ", nodeId = " + aer.getNodeId());
+			// }
 
 			if (appServer.state != ServerState.LEADER) {
 				return;
@@ -1033,10 +1042,12 @@ public class AppServer {
 		private static void recvRequestVote(Message message) {
 			RequestVoteRPC rv = (RequestVoteRPC) message;
 
-			if (DEBUG) {
-				System.out.println("recvRequestVote: term = " + rv.getTerm() + ", candidateId = " + rv.getCandidateId()
-						+ ", lastLogIndex = " + rv.getLastLogIndex() + ", lastLogTerm = " + rv.getLastLogTerm());
-			}
+			// if (DEBUG) {
+			// System.out.println("recvRequestVote: term = " + rv.getTerm() + ",
+			// candidateId = " + rv.getCandidateId()
+			// + ", lastLogIndex = " + rv.getLastLogIndex() + ", lastLogTerm = "
+			// + rv.getLastLogTerm());
+			// }
 
 			int currentTerm = readCurrentTermFile();
 
@@ -1083,10 +1094,12 @@ public class AppServer {
 
 			RequestVoteRPCResponse response = new RequestVoteRPCResponse(currentTerm, voteGranted, appServer.id);
 
-			if (DEBUG) {
-				System.out.println("My response to recvRequestVote: term = " + response.getTerm() + ", isVoteGranted = "
-						+ response.isVoteGranted() + ", nodeId = " + response.getNodeId());
-			}
+			// if (DEBUG) {
+			// System.out.println("My response to recvRequestVote: term = " +
+			// response.getTerm() + ", isVoteGranted = "
+			// + response.isVoteGranted() + ", nodeId = " +
+			// response.getNodeId());
+			// }
 
 			sendMessage(appServer.nodes.get(rv.getCandidateId()), response);
 		}
@@ -1094,10 +1107,11 @@ public class AppServer {
 		private static void recvRequestVoteResponse(Message message) {
 			RequestVoteRPCResponse rvr = (RequestVoteRPCResponse) message;
 
-			if (DEBUG) {
-				System.out.println("recvRequestVoteResponse: term = " + rvr.getTerm() + ", isVoteGranted = "
-						+ rvr.isVoteGranted() + ", nodeId = " + rvr.getNodeId());
-			}
+			// if (DEBUG) {
+			// System.out.println("recvRequestVoteResponse: term = " +
+			// rvr.getTerm() + ", isVoteGranted = "
+			// + rvr.isVoteGranted() + ", nodeId = " + rvr.getNodeId());
+			// }
 
 			int currentTerm = readCurrentTermFile();
 
