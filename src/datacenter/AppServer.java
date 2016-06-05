@@ -989,7 +989,10 @@ public class AppServer {
 					++numOfNew;
 			}
 
-			for (int N = lastLogIndex; N > appServer.commitIndex && log.get(N).getTerm() == currentTerm; --N) {
+			for (int N = lastLogIndex; N > appServer.commitIndex; N--) {
+				if (log.get(N).getTerm() != currentTerm)
+					continue;
+
 				int cntOld = 0;
 				int cntNew = 0;
 
