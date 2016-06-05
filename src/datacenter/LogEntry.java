@@ -1,24 +1,27 @@
 package datacenter;
 
-public class LogEntry {
+import java.io.Serializable;
+
+public class LogEntry implements Serializable {
 	private int term;
-<<<<<<< Updated upstream
-	private String command;
-	
-	public int getTerm(){
-		return this.term;
+	private LogEntryType type;
+	private String contents;
+
+	public LogEntry(int term, LogEntryType type, String contents) {
+		this.term = term;
+		this.type = type;
+		this.contents = contents;
 	}
-	
-	public String getCommand(){
-		return this.command;
-=======
+
+	public LogEntryType getType() {
+		return type;
+	}
+
+	public String getContents() {
+		return contents;
+	}
 
 	public int getTerm() {
 		return term;
-	}
-
-	public LogEntry(int term) {
-		this.term = term;
->>>>>>> Stashed changes
 	}
 }

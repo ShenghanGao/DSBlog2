@@ -1,0 +1,4 @@
+#!/bin/bash
+mkdir build
+javac -d build src/*/*.java
+
