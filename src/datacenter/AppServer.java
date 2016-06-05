@@ -622,8 +622,8 @@ public class AppServer {
 	}
 
 	public static void serverPeriodic() {
-		// if (appServer.id == -1)
-		// return;
+		if (appServer.id == -1)
+			return;
 
 		if (appServer.state != ServerState.LEADER)
 			appServer.timeoutElapsed += period;
