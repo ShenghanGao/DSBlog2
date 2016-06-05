@@ -168,6 +168,7 @@ public class AppServer {
 	}
 
 	public static void printLog() {
+		System.out.println("My log: ");
 		List<LogEntry> log = readLogFile();
 		for (LogEntry e : log) {
 			if (e.getType() == LogEntryType.POST) {
@@ -652,7 +653,7 @@ public class AppServer {
 	 * akira.cs.ucsb.edu: 128.111.43.47
 	 */
 	public static void main(String[] args) {
-		String IPAddressesFile = "./IPAddresses2";
+		String IPAddressesFile = "./IPAddresses";
 
 		BufferedReader br = null;
 		try {
