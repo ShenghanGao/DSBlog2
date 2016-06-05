@@ -163,8 +163,8 @@ public class AppServer {
 		System.out.println("id = " + appServer.id);
 		System.out.println("currentLeader = " + appServer.currentLeader);
 		// System.out.println("timeoutElapsed = " + appServer.timeoutElapsed);
-		// System.out.println("commitIndex = " + appServer.commitIndex);
-		// System.out.println("cfgChangeLogIdx = " + appServer.cfgChangeLogIdx);
+		System.out.println("commitIndex = " + appServer.commitIndex);
+		System.out.println("cfgChangeLogIdx = " + appServer.cfgChangeLogIdx);
 	}
 
 	public static void printLog() {
@@ -844,13 +844,11 @@ public class AppServer {
 
 			Message response;
 
-			// if (DEBUG) {
-			// System.out.println("recvAppendEntries: term = " + ae.getTerm() +
-			// ", leaderId = " + ae.getLeaderId()
-			// + ", prevLogIndex = " + ae.getPrevLogIndex() + ", prevLogTerm = "
-			// + ae.getPrevLogTerm()
-			// + ", leaderCommit = " + ae.getLeaderCommit());
-			// }
+			if (DEBUG) {
+				System.out.println("recvAppendEntries: term = " + ae.getTerm() + ", leaderId = " + ae.getLeaderId()
+						+ ", prevLogIndex = " + ae.getPrevLogIndex() + ", prevLogTerm = " + ae.getPrevLogTerm()
+						+ ", leaderCommit = " + ae.getLeaderCommit());
+			}
 
 			int currentTerm = readCurrentTermFile();
 
@@ -938,11 +936,10 @@ public class AppServer {
 		private static void recvAppendEntriesResponse(Message message) {
 			AppendEntriesRPCResponse aer = (AppendEntriesRPCResponse) message;
 
-			// if (DEBUG) {
-			// System.out.println("recvAppendEntriesResponse: term = " +
-			// aer.getTerm() + ", success = "
-			// + aer.isSuccess() + ", nodeId = " + aer.getNodeId());
-			// }
+			if (DEBUG) {
+				System.out.println("recvAppendEntriesResponse: term = " + aer.getTerm() + ", success = "
+						+ aer.isSuccess() + ", nodeId = " + aer.getNodeId());
+			}
 
 			if (appServer.state != ServerState.LEADER) {
 				return;
@@ -1043,12 +1040,10 @@ public class AppServer {
 		private static void recvRequestVote(Message message) {
 			RequestVoteRPC rv = (RequestVoteRPC) message;
 
-			// if (DEBUG) {
-			// System.out.println("recvRequestVote: term = " + rv.getTerm() + ",
-			// candidateId = " + rv.getCandidateId()
-			// + ", lastLogIndex = " + rv.getLastLogIndex() + ", lastLogTerm = "
-			// + rv.getLastLogTerm());
-			// }
+			if (DEBUG) {
+				System.out.println("recvRequestVote: term = " + rv.getTerm() + ", candidateId = " + rv.getCandidateId()
+						+ ", lastLogIndex = " + rv.getLastLogIndex() + ", lastLogTerm = " + rv.getLastLogTerm());
+			}
 
 			int currentTerm = readCurrentTermFile();
 
@@ -1108,11 +1103,10 @@ public class AppServer {
 		private static void recvRequestVoteResponse(Message message) {
 			RequestVoteRPCResponse rvr = (RequestVoteRPCResponse) message;
 
-			// if (DEBUG) {
-			// System.out.println("recvRequestVoteResponse: term = " +
-			// rvr.getTerm() + ", isVoteGranted = "
-			// + rvr.isVoteGranted() + ", nodeId = " + rvr.getNodeId());
-			// }
+			if (DEBUG) {
+				System.out.println("recvRequestVoteResponse: term = " + rvr.getTerm() + ", isVoteGranted = "
+						+ rvr.isVoteGranted() + ", nodeId = " + rvr.getNodeId());
+			}
 
 			int currentTerm = readCurrentTermFile();
 
