@@ -23,7 +23,7 @@ import java.util.Random;
 public class AppServer {
 	private static AppServer appServer;
 
-	private static final int period = 10000;
+	private static final int period = 2000;
 
 	private static final int DC_LISTEN_TO_CLIENTS_PORT = 8887;
 
@@ -622,8 +622,8 @@ public class AppServer {
 	}
 
 	public static void serverPeriodic() {
-		if (appServer.id == -1)
-			return;
+		// if (appServer.id == -1)
+		// return;
 
 		if (appServer.state != ServerState.LEADER)
 			appServer.timeoutElapsed += period;
