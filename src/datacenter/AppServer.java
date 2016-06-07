@@ -218,7 +218,7 @@ public class AppServer {
 		if (!toRecover) {
 			writeCurrentTermFile(1);
 			writeVotedForFile(-1);
-			writeLogFile(new ArrayList<>());
+			writeLogFile(new ArrayList<LogEntry>());
 		}
 
 		if (toRecover) {
