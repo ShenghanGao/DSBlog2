@@ -1,0 +1,48 @@
+Team: Shenghan Gao, Binyi Chen
+
+Before run the program:
+Add the original server IP addresses to the file DSBlog2/IPAddresses
+If you put DSBlog2 and DSBlogClient2 in the same folder, DSBlogClient2 also need to read DSBlog2/IPAddresses in order to know the original server IP addresses
+
+DSBlog2:
+Raft server application, scripts are provided to compile and run the application
+
+Enter the folder:
+cd DSBlog2
+
+To compile:
+./mycompile
+
+To run:
+./runDC
+
+DSBlogClient2:
+Raft client application, scripts are provided to compile and run the application
+
+Enter the folder:
+cd DSBlogClient2
+
+To compile:
+./mycompile
+
+To run:
+./runClient
+
+Commands for the client:
+Post:
+Usage:
+serverID post message
+Example:
+1 post M1
+
+Lookup:
+Usage:
+serverID lookup
+Example:
+1 lookup
+
+Configuration change:
+Usage:
+serverID cfgChange newNumberOfNodes newServerIps
+Example:
+2 cfgChange 5 128.111.43.40 128.111.43.41 128.111.43.43 128.111.43.45 128.111.43.47
