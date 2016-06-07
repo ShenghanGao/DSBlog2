@@ -13,8 +13,12 @@ cd DSBlog2
 To compile:
 ./mycompile
 
-To run:
+To run without recovering server states:
 ./runDC
+
+To run with recovering server states:
+./runDC r
+
 
 DSBlogClient2:
 Raft client application, scripts are provided to compile and run the application
