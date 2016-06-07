@@ -1,6 +1,10 @@
 package datacenter;
 
 public class AppendEntriesRPCResponse extends Message {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 9098054531513584565L;
 	private int term;
 	private boolean success;
 	private int nodeId;

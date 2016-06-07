@@ -4,6 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AppendEntriesRPC extends Message {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -1480879138698235578L;
+
 	private int term;
 
 	private int leaderId;
@@ -39,7 +44,7 @@ public class AppendEntriesRPC extends Message {
 	public int getLeaderCommit() {
 		return leaderCommit;
 	}
-	
+
 	public AppendEntriesRPC(int term, int leaderId, int prevLogIndex, int prevLogTerm, List<LogEntry> entries,
 			int leaderCommit) {
 		super(MessageType.APPEND_ENTRIES);

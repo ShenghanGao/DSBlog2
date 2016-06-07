@@ -1,6 +1,11 @@
 package datacenter;
 
 public class RequestVoteRPC extends Message {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 8072674012334816599L;
+
 	private int term;
 
 	private int candidateId;
