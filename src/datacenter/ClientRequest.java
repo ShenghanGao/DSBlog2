@@ -3,10 +3,11 @@ package datacenter;
 import java.net.InetAddress;
 
 public class ClientRequest extends Message {
+
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 2207937282410070568L;
+	private static final long serialVersionUID = 7066879258460566712L;
 	private InetAddress inetAddress;
 	private String req;
 

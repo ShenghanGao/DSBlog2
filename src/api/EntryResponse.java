@@ -3,6 +3,10 @@ package api;
 import java.io.Serializable;
 
 public class EntryResponse implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -2610868522087379671L;
 	private int id;
 	private int term;
 
