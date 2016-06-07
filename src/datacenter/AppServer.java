@@ -29,7 +29,7 @@ public class AppServer {
 
 	private static final int DC_LISTEN_TO_DC_PORT = 8888;
 
-	private static final int CLIENT_LISTEN_TO_DC_PORT = 8888;
+	private static final int CLIENT_LISTEN_TO_DC_PORT = 8889;
 
 	private static final int electionTimeout = 5 * period;
 
